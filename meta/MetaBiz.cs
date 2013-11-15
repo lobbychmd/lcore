@@ -96,7 +96,13 @@ namespace l.core
         
         private void handleException(BizResult r, Exception e, string context, bool reThrow ) {
             if (e is BizException) ; //内层的异常，已经处理过了
-            else r.Errors = new List<ValidationResult> { new ValidationResult(e.Message + "\n\n" + context + "\n\n" + e.StackTrace) };
+            else
+            {
+                if (e is System.Data.SqlClient.SqlException && ((System.Data.SqlClient.SqlException)(e)).Number > 90000) {
+                    r.Errors = new List<ValidationResult> { new ValidationResult(e.Message ) };
+                }
+                else r.Errors = new List<ValidationResult> { new ValidationResult(e.Message + "\n\n" + context + "\n\n" + e.StackTrace) };
+            }
 
             if (reThrow) throw new BizException(e.Message); //抛出异常以便回到最外层处理： 回滚
             

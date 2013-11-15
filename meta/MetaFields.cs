@@ -302,6 +302,20 @@ namespace l.core
             }
             return q;
         }
+
+        public string Render(object value, Type type = null) {
+            var nil = value == DBNull.Value || value == null;
+            bool raw = EditorType == null || EditorType == "" || EditorType.ToUpper() == "STRING";
+            //raw 是为了考虑没有设置编辑框（此时可能是缺省的 string），就转由数据库类型判断
+
+            if (!nil && value.GetType() == typeof(string)) return value as string;
+            else if (!nil && EditorType.ToUpper().Equals("DATE")) return Convert.ToDateTime(value).ToString("yyyy-MM-dd");
+            else if (!nil && EditorType.ToUpper().Equals("TIME")) return Convert.ToDateTime(value).ToString("HH:mm:ss");
+            else if (!nil && EditorType.ToUpper().Equals("DATETIME") || (raw && type == typeof(DateTime))) return Convert.ToDateTime(value).ToString("yyyy-MM-dd HH:mm:ss");
+            else if (EditorType.ToUpper().Equals("BOOLEAN") || (raw && type == typeof(Boolean))) return Convert.ToBoolean(nil ? false : value) ? "√" : "×";
+            else if (!nil) return value.ToString();
+            else return string.Empty;
+        }
     }
 
 

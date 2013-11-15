@@ -230,7 +230,11 @@ namespace l.core
                         foreach (KeyValuePair<string, object> e in dv)
                             if (ds.Tables[0].Columns.Contains(e.Key))
                                 if (ds.Tables[0].Columns[e.Key].DataType == typeof(DateTime))
-                                    ds.Tables[0].Columns[e.Key].ExtendedProperties["DefaultValue"] = DateTime.Now.AddDays(Convert.ToInt32( e.Value));
+                                    try{
+                                        ds.Tables[0].Columns[e.Key].ExtendedProperties["DefaultValue"] = DateTime.Now.AddDays(Convert.ToInt32(e.Value));
+                                    }catch {
+                                        ds.Tables[0].Columns[e.Key].ExtendedProperties["DefaultValue"] = DateTime.Parse(e.Value.ToString());
+                                    }
                                 else ds.Tables[0].Columns[e.Key].ExtendedProperties["DefaultValue"] = e.Value;
                 }
                 j++;
