@@ -19,9 +19,9 @@ namespace l.core
             fieldsmeta = new List<FieldMeta>();
         }
 
-        public FieldMeta Get(string fieldName) {
+        public FieldMeta Get(string fieldName, bool defaultDisplay = true) {
             var r = from FieldMeta f in fieldsmeta where f.FieldName == fieldName select f;
-            return r.Count() > 0 ? r.First() : new FieldMeta { FieldName = fieldName, DisplayLabel = fieldName, EditorType = ""};
+            return r.Count() > 0 ? r.First() : new FieldMeta { FieldName = fieldName, DisplayLabel = defaultDisplay? fieldName:null, EditorType = ""};
         }
 
         public FieldMetaHelper Ready(DataTable dt, string context = "") {
