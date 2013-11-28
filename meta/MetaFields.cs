@@ -118,7 +118,6 @@ namespace l.core
     //通用模型加上ORM 设定
     public class FieldMeta : MetaField {
         public string HashCode { get; set; }
-
         static private OrmHelper getOrm(Object obj) {
             return OrmHelper.From("metaColumn").PK("ColumnName", "At").MF("DropDownList", null)
                 .MF("UIType", null).MF("FieldName", "ColumnName").MF("Context", "At").MF("DisplayLabel", "Caption").
@@ -130,6 +129,7 @@ namespace l.core
                 MF("IsName", null).MF("DataType", null).
                 MF("ReadOnlyStatus", null).MF("Number", null).
                 MF("SubData", null).MF("Model", null).
+                MF("Sum", null).
                 Obj(obj).End;
         }
 
@@ -235,6 +235,7 @@ namespace l.core
 
         #region shop 用的元数据
         public bool Summary { get; set; }
+        public bool Sum { get; set; }
         public MetaFieldQuery QueryInfo { get; set; }
         public MetaFieldLookup LookupInfo { get; set; }
         public MetaFieldID IDInfo { get; set; }
@@ -304,7 +305,7 @@ namespace l.core
         }
 
         public string Render(object value, Type type = null) {
-            var nil = value == DBNull.Value || value == null;
+            var nil = value == null || value == DBNull.Value;
             bool raw = EditorType == null || EditorType == "" || EditorType.ToUpper() == "STRING";
             //raw 是为了考虑没有设置编辑框（此时可能是缺省的 string），就转由数据库类型判断
 
@@ -316,6 +317,8 @@ namespace l.core
             else if (!nil) return value.ToString();
             else return string.Empty;
         }
+
+        
     }
 
 
