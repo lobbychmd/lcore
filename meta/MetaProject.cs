@@ -59,7 +59,9 @@ namespace l.core
 
     //全局的。每个用户都共享
     public class Project : MetaProject {
+        public Dictionary<string, object> Params { get; set; }
         public Project(string frmConnKey = null, Dictionary<string, string> connMaps = null): base(frmConnKey, connMaps){
+            Params = new Dictionary<string, object>();
         }
         static public Project Current;
     }

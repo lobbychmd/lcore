@@ -207,7 +207,7 @@ namespace l.core
         public short Precision { get; set; }
         public bool Money { get; set; }
     }
-    public enum SysModelType { smUpdateTime, smOperator, smState, smUnknown }
+    public enum SysModelType { smUpdateTime, smOperator, smState, smID, smUnknown }
     public class ModelInfo : System.Attribute
     {
         public string Model { get; set; }
