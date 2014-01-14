@@ -111,11 +111,12 @@ namespace l.core
                     sqls.Add(new sqlItem{ script =  SQLHelper.From(c.TableName).Fields(fields).Insert(), @params = obj2DbParams(c, fields, c.Object)});
                 }
                 else  {
-                    foreach (object p in (c.Object as dynamic)) {//逐条插入 
-                        var fields = c.DBFields(p);
-                        fields = fields.Union(c.PKey).ToArray();
-                        sqls.Add(new sqlItem{ script =  SQLHelper.From(c.TableName).Fields(fields).Insert(), @params = obj2DbParams(c, fields,  p, config[0].Object)});
-                    }
+                    if (c.Object != null)
+                        foreach (object p in (c.Object as dynamic)) {//逐条插入 
+                            var fields = c.DBFields(p);
+                            fields = fields.Union(c.PKey).ToArray();
+                            sqls.Add(new sqlItem{ script =  SQLHelper.From(c.TableName).Fields(fields).Insert(), @params = obj2DbParams(c, fields,  p, config[0].Object)});
+                        }
                 }
                 i++;
             });

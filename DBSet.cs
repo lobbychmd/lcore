@@ -148,7 +148,7 @@ namespace System.Data
         public string Type { get; set; }
 
         private object getValue(BsonValue value) {
-            return value.IsDateTime ? value.AsDateTime : (value.IsObjectId? value.ToString(): value.RawValue);
+            return value.IsValidDateTime ? value.AsDateTime : (value.IsObjectId? value.ToString(): value.RawValue);
         }
         public IEnumerator GetEnumerator()
         {

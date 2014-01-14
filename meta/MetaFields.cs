@@ -117,7 +117,6 @@ namespace l.core
 
     //通用模型加上ORM 设定
     public class FieldMeta : MetaField {
-        public string HashCode { get; set; }
         static private OrmHelper getOrm(Object obj) {
             return OrmHelper.From("metaColumn").PK("ColumnName", "At").MF("DropDownList", null)
                 .MF("UIType", null).MF("FieldName", "ColumnName").MF("Context", "At").MF("DisplayLabel", "Caption").
@@ -312,7 +311,7 @@ namespace l.core
             if (!nil && value.GetType() == typeof(string)) return value as string;
             else if (!nil && EditorType.ToUpper().Equals("DATE")) return Convert.ToDateTime(value).ToString("yyyy-MM-dd");
             else if (!nil && EditorType.ToUpper().Equals("TIME")) return Convert.ToDateTime(value).ToString("HH:mm:ss");
-            else if (!nil && EditorType.ToUpper().Equals("DATETIME") || (raw && type == typeof(DateTime))) return Convert.ToDateTime(value).ToString("yyyy-MM-dd HH:mm:ss");
+            else if (!nil && (EditorType.ToUpper().Equals("DATETIME") || (raw && type == typeof(DateTime)))) return Convert.ToDateTime(value).ToString("yyyy-MM-dd HH:mm:ss");
             else if (EditorType.ToUpper().Equals("BOOLEAN") || (raw && type == typeof(Boolean))) return Convert.ToBoolean(nil ? false : value) ? "√" : "×";
             else if (!nil) return value.ToString();
             else return string.Empty;
