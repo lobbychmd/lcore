@@ -36,7 +36,7 @@ namespace l.core
         private OrmHelper getOrm() {
             return OrmHelper.From("metaBiz").F("BizID", "HashCode", "Version").PK("BizID").Obj(this).End
                 .SubFrom("metaBizItems").Obj(Scripts).End
-                .SubFrom("metaBizChecks").Obj(Checks).F("CheckIdx", "CheckRepeated", "CheckSummary", "ParamToValidate", "ParamToCompare", "CompareType", "Type", "CheckSQL", "CheckEnabled", "CheckUpdateFlag", "CheckExecuteFlag").
+                .SubFrom("metaBizChecks").Obj(Checks).F("CheckIdx","CheckType", "CheckRepeated", "CheckSummary", "ParamToValidate", "ParamToCompare", "CompareType", "Type", "CheckSQL", "CheckEnabled", "CheckUpdateFlag", "CheckExecuteFlag").
                     MF("Type", "ValidateType").End
                 .SubFrom("metaBizParams").Obj(Params).End;
         }
@@ -58,16 +58,30 @@ namespace l.core
     }
 
     //下面是通用模型
+    public class BizValidationResult:  ValidationResult{
+        public BizValidationResult(string errorMessage)
+            : base(errorMessage){}
+
+        public BizValidationResult(string errorMessage, IEnumerable<string> memberNames)
+            : base(errorMessage, memberNames){ }
+
+        public BizValidationResult(string errorMessage, IEnumerable<string> memberNames, bool warning)
+            : base(errorMessage, memberNames){ 
+            this.Warning  = warning;
+        }
+
+        public bool Warning { get; set; }
+    }
 
     public class BizResult {
-        public bool IsValid { get { return Errors ==null || Errors.Count() == 0; } }
+        public bool IsValid { get { return Errors ==null || Errors.Where(p=> !p.Warning ).Count() == 0; } }
         //public ValidationResult[] Errors { get; set; }
-        public List<ValidationResult> Errors { get; set; }  //list 类型方便添加
+        public List<BizValidationResult> Errors { get; set; }  //list 类型方便添加
         //public Dictionary<BizParam, object> ReturnValues { get; set; }
         public Dictionary<string, object> ReturnValues { get; set; }
 
         public BizResult() {
-            Errors = new List<ValidationResult>();
+            Errors = new List<BizValidationResult>();
         }
     }
 
@@ -99,9 +113,9 @@ namespace l.core
             else
             {
                 if (e is System.Data.SqlClient.SqlException && ((System.Data.SqlClient.SqlException)(e)).Number > 90000) {
-                    r.Errors = new List<ValidationResult> { new ValidationResult(e.Message ) };
+                    r.Errors = new List<BizValidationResult> { new BizValidationResult(e.Message) };
                 }
-                else r.Errors = new List<ValidationResult> { new ValidationResult(e.Message + "\n\n" + context + "\n\n" + e.StackTrace) };
+                else r.Errors = new List<BizValidationResult> { new BizValidationResult(e.Message + "\n\n" + context + "\n\n" + e.StackTrace) };
             }
 
             if (reThrow) throw new BizException(e.Message); //抛出异常以便回到最外层处理： 回滚
@@ -183,16 +197,31 @@ namespace l.core
             }
         }
 
-        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) {
+        public BizResult CheckConfirm(IDbConnection conn)
+        {
+            validateSelf();
+            BizResult r = new BizResult ();
+            r.Errors = InternalValidate(null, true, false).ToList();
+            return r;
+        }
+
+        public IEnumerable<BizValidationResult> Validate(ValidationContext validationContext) {
+            return InternalValidate(validationContext, false, true);
+        }
+
+        public IEnumerable<BizValidationResult> InternalValidate(ValidationContext validationContext, bool checkConfirm, bool checkNotConfirm) {
             var pv = SmartParams.GetDBParams(Params);
-            foreach (var c in Checks.Where(p=> p.CheckEnabled)){
+            foreach (var c in Checks.Where(p => p.CheckEnabled ) ) {
+                if( !checkConfirm && c.CheckType == BizCheckType.etConfirm) continue;
+                if( !checkNotConfirm && c.CheckType != BizCheckType.etConfirm ) continue;
+
                 var p2v = Params.Find(p => p.ParamName ==  c.ParamToValidate);
                 if (p2v == null) throw new Exception(string.Format("Biz \"{0}\" 的检查 \"{1}\" 参数是 \"{2}\"，但并未定义.", BizID, c.CheckSummary, c.ParamToValidate));
                 if (p2v.ParamRepeated != c.CheckRepeated) throw new Exception(string.Format("Biz \"{0}\" 的检查 \"{1}\" 的重复设置跟待检查的参数不一致.", BizID, c.CheckSummary));
                 var par = Params.Find(p => p.ParamName == (string.IsNullOrEmpty( c.CheckUpdateFlag) ? c.ParamToValidate : c.CheckUpdateFlag));
                 //if ((par == null ) || (!par.ParamRepeated)){
                 if(!c.CheckRepeated){
-                    if (!c.Validate(pv, this)) yield return new ValidationResult(c.CheckSummary, new[] { c.ParamToValidate });
+                    if (!c.Validate(pv, this)) yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate }, c.CheckType == BizCheckType.etWarning);
                 }else {
                     if (par == null) throw new Exception(string.Format("Biz \"{0}\" 的检查 \"{1}\" 未能确定更新标志参数，可能未定义UpdateFlag参数.", BizID, c.CheckSummary));
                     var paramsName = (from Match m in new Regex(":([a-zA-z_]+)").Matches(c.CheckSQL ?? "") select m.Value.Substring(1))
@@ -207,7 +236,7 @@ namespace l.core
                     }
                     foreach(var p in pl){
                             if (!c.Validate(p, this))
-                                yield return new ValidationResult(c.CheckSummary, new[] { c.ParamToValidate + "." + i.ToString()});
+                                yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate + "." + i.ToString(),  }, c.CheckType == BizCheckType.etWarning);
                         i++;                            
                     };
                 }
@@ -219,10 +248,11 @@ namespace l.core
         }
     }
 
-    public class BizCheck
-    {
+    public enum BizCheckType { etError, etWarning, etConfirm };
+    public class BizCheck {
         public int CheckIdx { get; set; }
         public bool CheckRepeated { get; set; }
+        public BizCheckType CheckType { get; set; }
         [Required]
         public string CheckSummary { get; set; }
         public string ParamToValidate { get; set; }
