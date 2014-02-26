@@ -125,7 +125,7 @@ namespace l.core
 
         public Connection Load() {
             var loaded = getOrm().Setup();
-            if (VersionHelper.Helper != null) if (!VersionHelper.Helper.CheckNewAs<Connection>(this, "MetaConnection", new[] { "Alias" }, true)) loaded =  getOrm().Setup();
+            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) if (!VersionHelper.Helper.CheckNewAs<Connection>(this, "MetaConnection", new[] { "Alias" }, true)) loaded = getOrm().Setup();
             if (!loaded) throw new Exception(string.Format("Connection \"{0}\" does not exist.", Alias)); 
             return this;
         }
@@ -170,7 +170,7 @@ namespace l.core
 
         public Theme Load() {
             getOrm().Setup();
-            if (VersionHelper.Helper != null) if (!VersionHelper.Helper.CheckNewAs<Theme>(this, "MetaTheme", new[] { "Theme" }, true)) getOrm().Setup();
+            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) if (!VersionHelper.Helper.CheckNewAs<Theme>(this, "MetaTheme", new[] { "Theme" }, true)) getOrm().Setup();
             return this;
         }
 

@@ -145,7 +145,8 @@ namespace l.core
         #region helper 方法
         static public FieldMeta[] Get (FieldMeta[] fieldsMeta, string context, params string[] fields){
             var result = fields.Select(p => new FieldMeta { Context = context, FieldName = p, CharLength=-1001 }).ToArray();
-            if (VersionHelper.Helper != null){ //不批量
+            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0)
+            { //不批量
                 foreach (FieldMeta fm in result) {
                     getOrm(fm).Setup();
                     if (!VersionHelper.Helper.CheckNewAs<FieldMeta>(fm, "MetaField", new []{"FieldName", "Context"}, true)) getOrm(fm).Setup();

@@ -49,7 +49,7 @@ namespace l.core
         public Query Load() {
             var loaded = getOrm().Setup();
 
-            if (VersionHelper.Helper != null) if (!VersionHelper.Helper.CheckNewAs<Query>(this, "MetaQuery", new[] { "QueryName" }, true)) loaded = getOrm().Setup();
+            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) if (!VersionHelper.Helper.CheckNewAs<Query>(this, "MetaQuery", new[] { "QueryName" }, true)) loaded = getOrm().Setup();
             if (!loaded) throw new Exception(string.Format("Query \"{0}\" does not exist.", QueryName));
             else if (Scripts.Count == 0) throw new Exception(string.Format("Query \"{0}\" does not include any statements.", QueryName));
             //checkHashCode();
@@ -145,6 +145,7 @@ namespace l.core
         }
 
         private DataTable executeQuery(IDbConnection conn, QueryScript item, Dictionary<string, DBParam> @params, int p1, int p2, bool allowSqlError){
+            var t1 = DateTime.Now;
             try{
                 var dt = DBHelper.ExecuteQuery(conn, SmartParams.ParamNamePrefixHandle(Params, item.Script), @params, p1, p2);
 
@@ -163,7 +164,14 @@ namespace l.core
                     dt.Columns.Add("error").Caption = e.Message;
                     return dt;
                 } else throw new Exception(string.Format("执行查询 \"{0}\" 发生sql 错误.\n{1}", QueryName, e.Message));
-            } 
+            }
+            finally{
+                var t2 = DateTime.Now;
+                var t3 = t2 - t1;
+                if (l.core.VersionHelper.Helper != null && l.core.VersionHelper.Helper.Action.IndexOf("expim") >= 0)
+                    if (!string.IsNullOrEmpty(QueryName))
+                        l.core.VersionHelper.Helper.InvokeRec<MetaQuery>(this, "MetaQuery", new[] { "QueryName" }, t3.Milliseconds);
+            }
         }
 
         private DataSet Execute(IDbConnection conn , int queryType, int startRecord, int count, bool allowSqlError) {

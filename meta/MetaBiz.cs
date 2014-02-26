@@ -43,7 +43,7 @@ namespace l.core
 
         public Biz Load() {
             var loaded = getOrm().Setup();
-            if (VersionHelper.Helper != null) if (!VersionHelper.Helper.CheckNewAs<Biz>(this,"MetaBiz", new []{"BizID"}, true))  loaded = getOrm().Setup();
+            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update")>= 0) if (!VersionHelper.Helper.CheckNewAs<Biz>(this, "MetaBiz", new[] { "BizID" }, true)) loaded = getOrm().Setup();
             if (!loaded) throw new Exception(string.Format("Biz \"{0}\" does not exist.", BizID));
             else if (Scripts.Where(p=>p.ProcEnabled).Count() == 0) throw new Exception(string.Format("Biz \"{0}\" does not include any valid statements.", BizID));
             //checkHashCode();
@@ -148,7 +148,7 @@ namespace l.core
             var connection = conn == null ? Project.Current == null ? DBHelper.GetConnection(1) : Project.Current.GetConn(string.IsNullOrEmpty(ConnAlias) ? null : ConnAlias) : null;
             try {
                 BizResult r = new BizResult ();
-                var trans = DBHelper.GetTranscation(conn ?? connection);
+                IDbTransaction trans =  DBHelper.GetTranscation(conn ?? connection);
                 try { 
                     r.Errors = Validate(null).ToList();
                     if (r.IsValid){

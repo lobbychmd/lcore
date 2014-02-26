@@ -64,6 +64,8 @@
     <Compile Include="Crypt.cs" />
     <Compile Include="DBSet.cs" />
     <Compile Include="Expression.cs" />
+    <Compile Include="meta\MetaBizSrv.cs" />
+    <Compile Include="meta\MetaQuerySrv.cs" />
     <Compile Include="meta\SysTableMeta.cs" />
     <Compile Include="pinyin.cs" />
     <Compile Include="SmartLookup.cs" />

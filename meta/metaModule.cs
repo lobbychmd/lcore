@@ -33,7 +33,7 @@ namespace l.core
 
         public Module Load() {
             var loaded = getOrm().Setup();
-            if (VersionHelper.Helper != null) if (!VersionHelper.Helper.CheckNewAs<Module>(this, "MetaModule", new[] { "ModuleID" }, true)) loaded = getOrm().Setup();
+            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) if (!VersionHelper.Helper.CheckNewAs<Module>(this, "MetaModule", new[] { "ModuleID" }, true)) loaded = getOrm().Setup();
             if (!loaded) throw new Exception(string.Format("Module \"{0}\" does not exist.", ModuleID));
             //checkHashCode();
             return this;
@@ -67,7 +67,7 @@ namespace l.core
 
         public Function Load() {
             getOrm().Setup();
-            if (VersionHelper.Helper != null) if (!VersionHelper.Helper.CheckNewAs<Function>(this,"MetaFunction", new []{"FuncID"}, true)) getOrm().Setup();
+            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) if (!VersionHelper.Helper.CheckNewAs<Function>(this, "MetaFunction", new[] { "FuncID" }, true)) getOrm().Setup();
             //checkHashCode();
             return this;
         }

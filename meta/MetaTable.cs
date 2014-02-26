@@ -32,7 +32,7 @@ namespace l.core
         public Table Load() {
             var loaded = getOrm().Setup();
             clone = Newtonsoft.Json.JsonConvert.DeserializeObject<MetaTable>(Newtonsoft.Json.JsonConvert.SerializeObject(this));
-            if (VersionHelper.Helper != null) if (!VersionHelper.Helper.CheckNewAs<Table>(this, "MetaTable", new[] { "TableName" }, true)) loaded = getOrm().Setup();
+            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) if (!VersionHelper.Helper.CheckNewAs<Table>(this, "MetaTable", new[] { "TableName" }, true)) loaded = getOrm().Setup();
             if (!loaded) throw new Exception(string.Format("Table \"{0}\" does not exist.", TableName));
             else if (Columns.Count == 0) throw new Exception(string.Format("Table \"{0}\" does not include any columns.", TableName));
             //checkHashCode();

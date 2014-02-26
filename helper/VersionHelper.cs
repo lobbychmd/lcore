@@ -11,9 +11,13 @@ namespace l.core
         object GetAs<T>(string metaType, Dictionary<string, string> keyValues);
         string GetStr(string metaType, Dictionary<string, string> keyValues);
         bool Suspend { get; set; }
+        List<string> Action { get; set; }
+
+        void InvokeRec<T>(object obj, string metaType, string[] keyFields, int timeCost);
     }
 
     public class VersionHelper {
         public static IVersionHelper Helper { get; set; }
+        
     }
 }
