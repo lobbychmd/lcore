@@ -277,27 +277,37 @@ namespace l.core
                 return string.Format("{0:" + DisplayFormat + "}", value);
             else return value;
         }
-        public Query CheckSQLList (bool fill){
+
+        public Query CheckSQLList (bool fill, Dictionary<string, DBParam> _params = null){
             Query q = null;
             if (Selection == null) return q;
-            if (new System.Text.RegularExpressions.Regex("[Ss][Ee][Ll][Ee][Cc][Tt].*[Ff][Rr][Oo][Mm]\\s").IsMatch(Selection))
-            {
+            if (new System.Text.RegularExpressions.Regex("[Ss][Ee][Ll][Ee][Cc][Tt].*[Ff][Rr][Oo][Mm]\\s").IsMatch(Selection)) {
                 q = new Query( "QueryDic" + FieldName + Context);
                 q.Scripts.Add(new  QueryScript{ ScriptIdx = 1, ScriptType = "SQL", Script = Selection} );
             }
             else if (new System.Text.RegularExpressions.Regex("^\\w+$").IsMatch(Selection))
-                try { q = new Query(Selection).Load(); }
+                try { 
+                    q = new Query(Selection).Load(); 
+                }
                 catch (Exception e) {
                     throw new Exception(string.Format("数据字典 \"{0}\" 下拉按查询 \"{1}\"执行出错\n", FieldName, Selection) + e.Message);
                 }
-            if (q != null && fill){
-                var ds = q.ExecuteQuery(null, 0, 0, false);
-                foreach(DataRow dr in ds.Tables[0].Rows){
-                    if (ds.Tables[0].Columns.Count > 1)
-                        DropDownList[dr[0].ToString()] = dr[ 1].ToString();
-                    else {
-                        var v = dr[0].ToString().Split('.');
-                        DropDownList[v[0]] = v[v.Count() == 1?0:1];
+            if (q != null && fill) {
+                if (_params != null) {
+                    foreach (var p in _params) {
+                        q.SmartParams.SetParamValue(p.Key, p.Value.ParamValue);
+                    }
+                }
+                //if (q.Params.Where(p=> _params.ContainsKey(p.ParamName)).Count()== 0)
+                {
+                    var ds = q.ExecuteQuery(null, 0, 0, false);
+                    foreach(DataRow dr in ds.Tables[0].Rows){
+                        if (ds.Tables[0].Columns.Count > 1)
+                            DropDownList[dr[0].ToString()] = dr[ 1].ToString();
+                        else {
+                            var v = dr[0].ToString().Split('.');
+                            DropDownList[v[0]] = v[v.Count() == 1?0:1];
+                        }
                     }
                 }
             }

@@ -15,7 +15,7 @@ namespace l.core
         ITables PrepareQuery(object conn );
         ITables ExecDataObject(object conn);
         List<QueryParam> Params { get; set; }
-        FieldMetaHelper GetParamMeta();
+        FieldMetaHelper GetParamMeta(Dictionary<string, DBParam> _params = null);
         string ParamsAsString(l.core.FieldMetaHelper fieldMeta);
         List<string> Groups();
     }
@@ -113,11 +113,12 @@ namespace l.core
             SmartParams = new ParamsHelper() ;
         }
 
-        public FieldMetaHelper GetParamMeta(){
+
+        public FieldMetaHelper GetParamMeta(Dictionary<string, DBParam> _params = null){
             var mfs = new FieldMetaHelper().Ready(Params.Select(p => p.ParamName), QueryName + "_p");
             Params.ForEach(p =>   {
                 mfs.EditorTypeFromColumnType(p.ParamName, p.ParamType);
-                mfs.Get(p.ParamName).CheckSQLList(true);
+                mfs.Get(p.ParamName).CheckSQLList(true, _params);
             });
             return mfs;
         }
