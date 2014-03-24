@@ -13,6 +13,12 @@ namespace l.core
 
     public class ParamsHelper{
         private Dictionary<string, object> ParamsValue;
+        //public Dictionary<string, object> ParamValues { get { return ParamsValue; } }
+
+        public override string ToString() {
+            return Newtonsoft.Json.JsonConvert.SerializeObject(ParamsValue);
+        }
+
         private IEnumerable<IParam> _params;
         public bool CheckParam { get; set; }
 

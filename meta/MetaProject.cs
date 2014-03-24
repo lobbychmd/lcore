@@ -86,7 +86,7 @@ namespace l.core
             if (frmConnKey == null) frmConnKey= dcsf + "0";
             connMapInfo = new Dictionary<string, string>();
             var cs = DBHelper.connConfig;
-
+           
             this.frmConnKey = frmConnKey;
             if (connMaps != null)
                 foreach (var i in connMaps) {

@@ -129,7 +129,8 @@ namespace l.core
 
         private void validateSelf() {
             Checks.ForEach(p => {
-                if (p.CheckEnabled){
+                p.ValidateSelf("Biz \"" + BizID + "\"", Params.Select(q=> q as IParam).ToList());
+                /*if (p.CheckEnabled){
                     if (p.Type.ToUpper().Equals("COMPARETO") ){
                         if (string.IsNullOrEmpty(p.CompareType))
                             throw new Exception(string.Format("Biz \"{0}\" 的检查 \"{1}\" 类型是比较，但比较类型未设置.", BizID, p.CheckSummary));
@@ -138,12 +139,13 @@ namespace l.core
                         else if (Params.Find(q=>q.ParamName == p.ParamToCompare) == null)
                             throw new Exception(string.Format("Biz \"{0}\" 的检查 \"{1}\" 类型是比较，但比较参数未定义.", BizID, p.CheckSummary));
                     }
-                }
+                }*/
             });
         }
 
         public BizResult Execute(IDbConnection conn)
         {
+            var t1 = DateTime.Now;
             validateSelf();
             var connection = conn == null ? Project.Current == null ? DBHelper.GetConnection(1) : Project.Current.GetConn(string.IsNullOrEmpty(ConnAlias) ? null : ConnAlias) : null;
             try {
@@ -151,13 +153,13 @@ namespace l.core
                 IDbTransaction trans =  DBHelper.GetTranscation(conn ?? connection);
                 try { 
                     r.Errors = Validate(null).ToList();
-                    if (r.IsValid){
-                        foreach(var script in Scripts.Where(p=>p.ProcEnabled )){
-                            var paramsName = (from Match m in new Regex(":([a-zA-z_][a-zA-z_\\d]+)").Matches(script.ProcSQL ?? "") select m.Value.Substring(1))
+                    if (r.IsValid) {
+                        foreach(var script in Scripts.OrderBy(p=>p.ProcIdx).Where(p=>p.ProcEnabled )){
+                            var paramsName = (from Match m in new Regex(":([a-zA-z_][a-zA-z_\\d]+)").Matches(script.ProcSQL ?? "") where m.Value.Length > 1 select m.Value.Substring(1) )
                                 .Union(script.ProcRepeated && (script.ProcUpdateFlag !=null) ? new[] { script.ProcUpdateFlag } : new string[] { });
 
                             foreach(var p in SmartParams.GetDBParamsSet(Params, paramsName, script.ProcRepeated ?
-                                    SmartParams.GetParamCount(script.ProcUpdateFlag ?? paramsName.Where(p => Params.Find(pp => pp.ParamName == p ).ParamRepeated).First()) : 1))  
+                                SmartParams.GetParamCount(!string.IsNullOrEmpty( script.ProcUpdateFlag)?script.ProcUpdateFlag: paramsName.Where(p => Params.Find(pp => pp.ParamName == p ).ParamRepeated).First()) : 1))  
                             {
                                 if (script.ProcRepeated && (!string.IsNullOrEmpty(script.ProcExecuteFlag)) && (("*" + script.ProcExecuteFlag).IndexOf(p[script.ProcUpdateFlag??"UpdateFlag"].ParamValue.ToString()) < 1)) 
                                     continue;
@@ -194,6 +196,11 @@ namespace l.core
             finally
             {
                 if (conn == null) connection.Dispose();
+                var t2 = DateTime.Now;
+                var t3 = t2 - t1;
+                if (l.core.VersionHelper.Helper != null && l.core.VersionHelper.Helper.Action.IndexOf("expim") >= 0)
+                    if (!string.IsNullOrEmpty(BizID))
+                        l.core.VersionHelper.Helper.InvokeRec<MetaBiz>(this, "MetaBiz", new[] { "BizID" }, SmartParams.ToString(), t3.Milliseconds);
             }
         }
 
@@ -211,9 +218,9 @@ namespace l.core
 
         public IEnumerable<BizValidationResult> InternalValidate(ValidationContext validationContext, bool checkConfirm, bool checkNotConfirm) {
             var pv = SmartParams.GetDBParams(Params);
-            foreach (var c in Checks.Where(p => p.CheckEnabled ) ) {
-                if( !checkConfirm && c.CheckType == BizCheckType.etConfirm) continue;
-                if( !checkNotConfirm && c.CheckType != BizCheckType.etConfirm ) continue;
+            foreach (var c in Checks.OrderBy(p=>p.CheckIdx).Where(p => p.CheckEnabled ) ) {
+                if( !checkConfirm && c.CheckType == CheckType.etConfirm) continue;
+                if( !checkNotConfirm && c.CheckType != CheckType.etConfirm ) continue;
 
                 var p2v = Params.Find(p => p.ParamName ==  c.ParamToValidate);
                 if (p2v == null) throw new Exception(string.Format("Biz \"{0}\" 的检查 \"{1}\" 参数是 \"{2}\"，但并未定义.", BizID, c.CheckSummary, c.ParamToValidate));
@@ -221,7 +228,7 @@ namespace l.core
                 var par = Params.Find(p => p.ParamName == (string.IsNullOrEmpty( c.CheckUpdateFlag) ? c.ParamToValidate : c.CheckUpdateFlag));
                 //if ((par == null ) || (!par.ParamRepeated)){
                 if(!c.CheckRepeated){
-                    if (!c.Validate(pv, this)) yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate }, c.CheckType == BizCheckType.etWarning);
+                    if (!c.Validate(pv, this, "biz \"" + BizID + "\"")) yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate }, c.CheckType == CheckType.etWarning);
                 }else {
                     if (par == null) throw new Exception(string.Format("Biz \"{0}\" 的检查 \"{1}\" 未能确定更新标志参数，可能未定义UpdateFlag参数.", BizID, c.CheckSummary));
                     var paramsName = (from Match m in new Regex(":([a-zA-z_]+)").Matches(c.CheckSQL ?? "") select m.Value.Substring(1))
@@ -235,8 +242,8 @@ namespace l.core
                         throw new Exception( string.Format("Biz \"{0}\" 业务检查 \"{1}\"执行中, ", BizID, c.CheckSummary) + e.Message);
                     }
                     foreach(var p in pl){
-                            if (!c.Validate(p, this))
-                                yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate + "." + i.ToString(),  }, c.CheckType == BizCheckType.etWarning);
+                            if (!c.Validate(p, this, "biz \"" + "\""))
+                                yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate + "." + i.ToString(),  }, c.CheckType == CheckType.etWarning);
                         i++;                            
                     };
                 }
@@ -248,83 +255,11 @@ namespace l.core
         }
     }
 
-    public enum BizCheckType { etError, etWarning, etConfirm };
-    public class BizCheck {
-        public int CheckIdx { get; set; }
+    
+    public class BizCheck : Check{
         public bool CheckRepeated { get; set; }
-        public BizCheckType CheckType { get; set; }
-        [Required]
-        public string CheckSummary { get; set; }
-        public string ParamToValidate { get; set; }
-        public string Type { get; set; }
-        public string CompareType { get; set; }
-        public string CheckSQL { get; set; }
-        public string ParamToCompare { get; set; }
-        public bool CheckEnabled { get; set; }
         public string CheckUpdateFlag { get; set; }
         public string CheckExecuteFlag { get; set; }
-
-        public bool Validate(Dictionary<string, DBParam> paramValues, MetaBiz biz) {
-            var type = Type.ToUpper().Trim();
-            if (type.Equals("REQUIRED"))   {
-                return !string.IsNullOrEmpty(Convert.ToString(paramValues[ParamToValidate].ParamValue));
-            }
-            else if (type.Equals("QUERY"))
-                using (var conn = Project.Current == null ? DBHelper.GetConnection(1) : Project.Current.GetConn(string.IsNullOrEmpty(biz.ConnAlias) ? null : biz.ConnAlias))
-                {
-                    return DBHelper.ExecuteQuery(conn, biz.ParamNamePrefixHandle(CheckSQL), paramValues).Rows.Count > 0;
-                }
-            else if (type.Equals("SQL"))
-                using (var conn = Project.Current == null ? DBHelper.GetConnection(1) : Project.Current.GetConn(string.IsNullOrEmpty(biz.ConnAlias) ? null : biz.ConnAlias))
-                {
-                    var dt = DBHelper.ExecuteQuery(conn, biz.ParamNamePrefixHandle(CheckSQL), paramValues);
-                    if (dt.Rows.Count == 0 || !dt.Columns.Contains("ResultCode"))
-                        throw new Exception(string.Format("SQL 类型的检查({0})必须返回一个ResultCode 字段.", CheckSummary));
-                    return dt.Rows[0]["ResultCode"].ToString() == "0";
-                }
-            else if (type.Equals("COMPARETO"))
-            {
-                var v1 = paramValues[ParamToValidate].ParamValue;
-                var v2 = paramValues[ParamToCompare].ParamValue;
-                if (paramValues[ParamToValidate].DbType == DbType.Int32) {
-                    if (CompareType == "=") return Convert.ToInt32(v1) == Convert.ToInt32(v2);
-                    else if (CompareType == ">") return Convert.ToInt32(v1) > Convert.ToInt32(v2);
-                    else if (CompareType == "<") return Convert.ToInt32(v1) < Convert.ToInt32(v2);
-                    else if (CompareType == ">=") return Convert.ToInt32(v1) >= Convert.ToInt32(v2);
-                    else if (CompareType == "<>") return Convert.ToInt32(v1) != Convert.ToInt32(v2);
-                    else return true;
-                }
-                else if (paramValues[ParamToValidate].DbType == DbType.Decimal)
-                {
-                    if (CompareType == "=") return Convert.ToDouble(v1) == Convert.ToDouble(v2);
-                    else if (CompareType == ">") return Convert.ToDouble(v1) > Convert.ToDouble(v2);
-                    else if (CompareType == "<") return Convert.ToDouble(v1) < Convert.ToDouble(v2);
-                    else if (CompareType == ">=") return Convert.ToDouble(v1) >= Convert.ToDouble(v2);
-                    else if (CompareType == "<>") return Convert.ToDouble(v1) != Convert.ToDouble(v2);
-                    else return true;
-                }
-                else if (paramValues[ParamToValidate].DbType == DbType.DateTime)
-                {
-                    if (CompareType == "=") return Convert.ToDateTime(v1) == Convert.ToDateTime(v2);
-                    else if (CompareType == ">") return Convert.ToDateTime(v1) > Convert.ToDateTime(v2);
-                    else if (CompareType == "<") return Convert.ToDateTime(v1) < Convert.ToDateTime(v2);
-                    else if (CompareType == ">=") return Convert.ToDateTime(v1) >= Convert.ToDateTime(v2);
-                    else if (CompareType == "<>") return Convert.ToDateTime(v1) != Convert.ToDateTime(v2);
-                    else return true;
-                }
-                else if (paramValues[ParamToValidate].DbType == DbType.String)
-                {
-                    if (CompareType == "=") return Convert.ToString(v1) == Convert.ToString(v2);
-                    else if (CompareType == "<>") return Convert.ToString(v1) != Convert.ToString(v2);
-                    else throw new Exception(string.Format("Biz \"{0}\" 检查 \"{1}\" 的比较字符串只能比较等于和不等于", biz.BizID, CheckSummary));
-                }
-                else {
-                    throw new Exception(string.Format("Biz \"{0}\" 检查 \"{1}\" 的无法比较此类型参数", biz.BizID, CheckSummary));
-                    //return false;
-                }
-            }        //paramValues[ParamToValidate].ParamValue.ToString() > paramValues[ ParamToValidate].ParamValue.ToString();
-            else return false;
-        }
     }
 
     public class BizScript {

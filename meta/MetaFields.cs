@@ -145,7 +145,7 @@ namespace l.core
         #region helper 方法
         static public FieldMeta[] Get (FieldMeta[] fieldsMeta, string context, params string[] fields){
             var result = fields.Select(p => new FieldMeta { Context = context, FieldName = p, CharLength=-1001 }).ToArray();
-            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0)
+            if (VersionHelper.Helper != null && (VersionHelper.Helper.Action.IndexOf("update") >= 0 || VersionHelper.Helper.Action.IndexOf("metaField") >=0))
             { //不批量
                 foreach (FieldMeta fm in result) {
                     getOrm(fm).Setup();
@@ -295,7 +295,7 @@ namespace l.core
             if (q != null && fill) {
                 if (_params != null) {
                     foreach (var p in _params) {
-                        q.SmartParams.SetParamValue(p.Key, p.Value.ParamValue);
+                        if (q.Params.Find(p1=> p1.ParamName == p.Key) != null) q.SmartParams.SetParamValue(p.Key, p.Value.ParamValue);
                     }
                 }
                 //if (q.Params.Where(p=> _params.ContainsKey(p.ParamName)).Count()== 0)

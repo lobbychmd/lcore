@@ -50,10 +50,17 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\l.cloud\bin\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="RazorEngine">
+      <HintPath>..\..\idc.web\bin\RazorEngine.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Web.Razor, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\idc.web\bin\System.Web.Razor.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -64,6 +71,7 @@
     <Compile Include="Crypt.cs" />
     <Compile Include="DBSet.cs" />
     <Compile Include="Expression.cs" />
+    <Compile Include="meta\Checks.cs" />
     <Compile Include="meta\MetaBizSrv.cs" />
     <Compile Include="meta\MetaQuerySrv.cs" />
     <Compile Include="meta\SysTableMeta.cs" />

@@ -13,7 +13,7 @@ namespace l.core
         bool Suspend { get; set; }
         List<string> Action { get; set; }
 
-        void InvokeRec<T>(object obj, string metaType, string[] keyFields, int timeCost);
+        void InvokeRec<T>(object obj, string metaType, string[] keyFields, string ParamsValue, int timeCost);
     }
 
     public class VersionHelper {

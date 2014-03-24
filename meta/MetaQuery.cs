@@ -1,10 +1,13 @@
-﻿using System;
+﻿using System.Text.RegularExpressions;
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Data;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using RazorEngine;
 
 namespace l.core
 {
@@ -40,8 +43,10 @@ namespace l.core
         }
 
         private OrmHelper getOrm() {
-            return OrmHelper.From("metaQuery").F("QueryName", "QueryType", "HashCode", "Version", "ConnAlias").PK("QueryName").Obj(this).End
-                .SubFrom("metaQueryScript").Obj(Scripts).MF("ScriptType", null).End
+            return OrmHelper.From("metaQuery").F("QueryName", "QueryType", "HashCode", "Version", "ConnAlias").MF("SysValues", null).PK("QueryName").Obj(this).End
+                .SubFrom("metaQueryScript").Obj(Scripts).End
+                .SubFrom("metaQueryChecks").F("CheckIdx","CheckType",  "CheckSummary", "ParamToValidate", "ParamToCompare", "CompareType", "Type", "CheckSQL", "CheckEnabled").
+                    MF("Type", "ValidateType").Obj(Checks).End
                // .SubFrom("metaQueryScript").Obj(ScriptsMeta).F("ScriptsMeta").End
                 .SubFrom("metaQueryParams").Obj(Params).MF("Default", null).End;
         }
@@ -69,6 +74,11 @@ namespace l.core
         static public string[] GetErrors(DataSet ds) {
             return (from DataTable dt in ds.Tables where dt.Columns.Count == 1 && dt.Columns[0].ColumnName == "error" select dt.Columns[0].Caption).ToArray();
         }
+        
+        static public string GetErrors(DataTable dt)
+        {
+            return dt.Columns.Count == 1 && dt.Columns[0].ColumnName == "error" ? dt.Columns[0].Caption : null;
+        }
 
         override protected void SaveMeta() {
             if (MetaChanged )
@@ -91,6 +101,14 @@ namespace l.core
     }
 
     //下面是通用模型
+    public class CheckException: Exception {
+        public CheckException(string message)
+            : base(message)
+        { 
+        
+        }
+    }
+
     public class MetaQuery
     {
         [Required]
@@ -102,6 +120,8 @@ namespace l.core
         public List<QueryScript> Scripts { get; set; }
         //public List<QueryScriptMeta> ScriptsMeta { get; set; }
         public List<QueryParam> Params { get; set; }
+        public List<QueryCheck> Checks { get; set; }
+        public Dictionary<string, object> SysValues { get; set; }
 
         protected bool MetaChanged;
         protected ParamsHelper SmartParams;
@@ -110,11 +130,20 @@ namespace l.core
             Scripts = new List<QueryScript>();
             //ScriptsMeta = new List<QueryScriptMeta>();
             Params = new List<QueryParam>();
+            Checks= new List<QueryCheck>();
             SmartParams = new ParamsHelper() ;
         }
+        public string ParamNamePrefixHandle(string sql)
+        {
+            return SmartParams.ParamNamePrefixHandle(Params, sql);
+        }
 
+        public FieldMetaHelper GetParamMeta()
+        {
+            return GetParamMeta(null);
+        }
 
-        public FieldMetaHelper GetParamMeta(Dictionary<string, DBParam> _params = null){
+        public FieldMetaHelper GetParamMeta(Dictionary<string, DBParam> _params ){
             var mfs = new FieldMetaHelper().Ready(Params.Select(p => p.ParamName), QueryName + "_p");
             Params.ForEach(p =>   {
                 mfs.EditorTypeFromColumnType(p.ParamName, p.ParamType);
@@ -145,10 +174,21 @@ namespace l.core
         virtual protected void SaveMeta() {
         }
 
-        private DataTable executeQuery(IDbConnection conn, QueryScript item, Dictionary<string, DBParam> @params, int p1, int p2, bool allowSqlError){
+        private DataTable executeQuery(IDbConnection conn, QueryScript item, Dictionary<string, DBParam> @params, int p1, int p2, bool allowSqlError, bool sqlrazor){
             var t1 = DateTime.Now;
             try{
-                var dt = DBHelper.ExecuteQuery(conn, SmartParams.ParamNamePrefixHandle(Params, item.Script), @params, p1, p2);
+                string template = SmartParams.ParamNamePrefixHandle(Params, item.Script);
+                if (sqlrazor){
+                    template = template.Replace("@", "^^^^").Replace("$", "@");
+                    string result = Razor.Parse(template, new { StoreNO = "xx" });
+                    template = template.Replace("^^^^", "@");
+                }
+
+                BizResult r = new BizResult ();
+                r.Errors =  Validate(null).ToList();
+                if (!r.IsValid) throw new CheckException(string.Join("\n", r.Errors.Select(p=>p.ErrorMessage)));
+
+                var dt = DBHelper.ExecuteQuery(conn, template, @params, p1, p2);
 
                 string meta = Newtonsoft.Json.JsonConvert.SerializeObject(
                         from System.Data.DataColumn c in dt.Columns select new { n = c.ColumnName, t = c.DataType.ToString() });
@@ -166,12 +206,18 @@ namespace l.core
                     return dt;
                 } else throw new Exception(string.Format("执行查询 \"{0}\" 发生sql 错误.\n{1}", QueryName, e.Message));
             }
+            catch (CheckException e)
+            {
+                DataTable dt = new DataTable();
+                dt.Columns.Add("error").Caption = e.Message;
+                return dt;
+            }
             finally{
                 var t2 = DateTime.Now;
                 var t3 = t2 - t1;
                 if (l.core.VersionHelper.Helper != null && l.core.VersionHelper.Helper.Action.IndexOf("expim") >= 0)
                     if (!string.IsNullOrEmpty(QueryName))
-                        l.core.VersionHelper.Helper.InvokeRec<MetaQuery>(this, "MetaQuery", new[] { "QueryName" }, t3.Milliseconds);
+                        l.core.VersionHelper.Helper.InvokeRec<MetaQuery>(this, "MetaQuery", new[] { "QueryName" }, SmartParams.ToString(), t3.Milliseconds);
             }
         }
 
@@ -184,7 +230,7 @@ namespace l.core
                     bool parialQuery = (queryType == 0) && (i == 0);//数据对象不分页
                     var dt = executeQuery(conn ?? connection, p,
                         SmartParams.GetQueryDBParams(queryType == 0 ? Params /*ParamsWithGroup()*/ : Params),
-                        (parialQuery ? startRecord : 0), (parialQuery ? count : 0), allowSqlError);
+                        (parialQuery ? startRecord : 0), (parialQuery ? count : 0), allowSqlError, p.ScriptType == "2");
                 
                     dt.TableName = QueryName + (i == 0 ? "" : "." + i.ToString());
                     ds.Tables.Add(dt);
@@ -202,6 +248,7 @@ namespace l.core
         public DataSet ExecuteQuery(IDbConnection conn = null, int startRecord = 0, int count = 10, bool allowSqlError = true) {
             if (QueryType != 0) throw new Exception(string.Format("查询类型不匹配，\"{0}\"不是标准查询.", QueryName));
             //else if (Scripts.Count() > 2) throw new Exception(string.Format("标准查询\"{0}\"最多允许2条语句（包括汇总）.", QueryName));
+            
             var ds = Execute(conn, 0, startRecord, count, allowSqlError);
             //if (ds.Tables.Count == 2)
             //    foreach(DataColumn dc in ds.Tables[1].Columns){
@@ -236,15 +283,17 @@ namespace l.core
                 if (!string.IsNullOrEmpty(p.DefaultValues)) {
                     var dv = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(p.DefaultValues) as Dictionary<string, object>;
                     if (dv != null)
-                        foreach (KeyValuePair<string, object> e in dv)
+                        foreach (KeyValuePair<string, object> e in dv){
+                            var value = Convert.ToString(e.Value).IndexOf('@') == 0 && SysValues != null && SysValues.ContainsKey(Convert.ToString(e.Value).Substring(1)) ? SysValues[Convert.ToString(e.Value).Substring(1)] : e.Value;
                             if (ds.Tables[0].Columns.Contains(e.Key))
                                 if (ds.Tables[0].Columns[e.Key].DataType == typeof(DateTime))
                                     try{
-                                        ds.Tables[0].Columns[e.Key].ExtendedProperties["DefaultValue"] = DateTime.Now.AddDays(Convert.ToInt32(e.Value));
+                                        ds.Tables[0].Columns[e.Key].ExtendedProperties["DefaultValue"] = DateTime.Now.AddDays(Convert.ToInt32(value));
                                     }catch {
-                                        ds.Tables[0].Columns[e.Key].ExtendedProperties["DefaultValue"] = DateTime.Parse(e.Value.ToString());
+                                        ds.Tables[0].Columns[e.Key].ExtendedProperties["DefaultValue"] = DateTime.Parse(value.ToString());
                                     }
-                                else ds.Tables[0].Columns[e.Key].ExtendedProperties["DefaultValue"] = e.Value;
+                                else ds.Tables[0].Columns[e.Key].ExtendedProperties["DefaultValue"] = value;
+                        }
                 }
                 j++;
                 break; //从表不做
@@ -258,7 +307,8 @@ namespace l.core
             if (ds.Tables[0].Rows.Count > 1) //!= 1)
                 throw new Exception(string.Format("数据对象\"{0}\"返回的行数是\"{1}\".", QueryName, ds.Tables[0].Rows.Count == 0 ? "0" : "大于1"));
             else  {
-                var l = new Dictionary<string, int>();
+                //暂不检查
+                /*var l = new Dictionary<string, int>();
                 foreach (DataTable dt in ds.Tables) {
                     foreach (DataColumn dc in dt.Columns) {
                         if (l.ContainsKey(dc.ColumnName)) l[dc.ColumnName] = l[dc.ColumnName] + 1;
@@ -267,8 +317,22 @@ namespace l.core
                 }
                 var c = l.Where(p=>p.Value > 1);
                 if (c.Count() > 0) 
-                    throw new Exception(string.Format("数据对象\"{0}\"存在重复字段\"{1}\".", QueryName, string.Join(",", c.Select(p=>p.Key))));
+                    throw new Exception(string.Format("数据对象\"{0}\"存在重复字段\"{1}\".", QueryName, string.Join(",", c.Select(p=>p.Key))));*/
                 return ds;
+            }
+        }
+
+        public IEnumerable<BizValidationResult> Validate(ValidationContext validationContext)
+        {
+            var pv = SmartParams.GetDBParams(Params);
+            foreach (var c in Checks.OrderBy(p => p.CheckIdx).Where(p => p.CheckEnabled))
+            {
+                var p2v = Params.Find(p => p.ParamName == c.ParamToValidate);
+                if (p2v == null) throw new CheckException(string.Format("Query \"{0}\" 的检查 \"{1}\" 参数是 \"{2}\"，但并未定义.", QueryName, c.CheckSummary, c.ParamToValidate));
+                var paramsName = (from Match m in new Regex(":([a-zA-z_]+)").Matches(c.CheckSQL ?? "") select m.Value.Substring(1))
+                    .Union(new[] { c.ParamToValidate });
+                if (!string.IsNullOrEmpty(c.ParamToCompare)) paramsName = paramsName.Union(new[] { c.ParamToCompare });
+                if (!c.Validate(pv, this, "query \"" + QueryName + "\"")) yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate }, c.CheckType == CheckType.etWarning);
             }
         }
 
@@ -286,6 +350,7 @@ namespace l.core
         public string Script { get; set; }
         public string MetaColumn { get; set; }
         public string DefaultValues { get; set; }
+        
         //public bool Succeed { get; set; }
     }
 
@@ -298,6 +363,8 @@ namespace l.core
         }
     }
 
+    public class QueryCheck : Check { 
+    }
     public class QueryParam  : IParam {
         [Required]
         public string ParamName { get; set; }
