@@ -111,6 +111,7 @@ namespace l.core
 
     public class MetaQuery
     {
+        private Dictionary<string, object> sysValues { get; set; }
         [Required]
         public string QueryName { get; set; }
         [Required]
@@ -121,7 +122,13 @@ namespace l.core
         //public List<QueryScriptMeta> ScriptsMeta { get; set; }
         public List<QueryParam> Params { get; set; }
         public List<QueryCheck> Checks { get; set; }
-        public Dictionary<string, object> SysValues { get; set; }
+        public Dictionary<string, object> SysValues { get { return sysValues; } set { 
+            sysValues = value ;
+            foreach (var i in Params) { 
+                if (i.DefaultValue != null && i.DefaultValue.IndexOf("@") == 0 && value.ContainsKey(i.DefaultValue.Substring(1))) 
+                    i.DefaultValue = value[i.DefaultValue.Substring(1)].ToString();
+            }
+        } }
 
         protected bool MetaChanged;
         protected ParamsHelper SmartParams;
@@ -382,8 +389,8 @@ namespace l.core
                 (ParamType == ColumnType.ctDateTime ? 
                     (DefaultValue.ToString().Trim() == ""?
                     null:
-                    DateTime.Now.AddDays(Convert.ToInt32(DefaultValue)) as object 
-                    ): DefaultValue);
+                    DateTime.Now.AddDays(Convert.ToInt32(DefaultValue)) as object
+                    ) : (ParamType == ColumnType.ctBool ? DefaultValue == "1" || DefaultValue == "true" ||DefaultValue == "True" ?true:false as object : DefaultValue));
         }
     }
 

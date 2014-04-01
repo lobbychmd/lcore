@@ -64,7 +64,8 @@ namespace l.core
             {
                 var v1 = paramValues[ParamToValidate].ParamValue;
                 var v2 = paramValues[ParamToCompare].ParamValue;
-                if (paramValues[ParamToValidate].DbType == DbType.Int32) {
+                if (v1 == DBNull.Value || v2 == DBNull.Value) return false;
+                else if (paramValues[ParamToValidate].DbType == DbType.Int32) {
                     if (CompareType == "=") return Convert.ToInt32(v1) == Convert.ToInt32(v2);
                     else if (CompareType == ">") return Convert.ToInt32(v1) > Convert.ToInt32(v2);
                     else if (CompareType == "<") return Convert.ToInt32(v1) < Convert.ToInt32(v2);
@@ -83,8 +84,7 @@ namespace l.core
                 }
                 else if (paramValues[ParamToValidate].DbType == DbType.DateTime)
                 {
-                    if (v1 == DBNull.Value || v2 == DBNull.Value) return false;
-                    else if (CompareType == "=") return Convert.ToDateTime(v1) == Convert.ToDateTime(v2);
+                    if (CompareType == "=") return Convert.ToDateTime(v1) == Convert.ToDateTime(v2);
                     else if (CompareType == ">") return Convert.ToDateTime(v1) > Convert.ToDateTime(v2);
                     else if (CompareType == "<") return Convert.ToDateTime(v1) < Convert.ToDateTime(v2);
                     else if (CompareType == ">=") return Convert.ToDateTime(v1) >= Convert.ToDateTime(v2);

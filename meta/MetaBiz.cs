@@ -112,10 +112,12 @@ namespace l.core
             if (e is BizException) ; //内层的异常，已经处理过了
             else
             {
-                if (e is System.Data.SqlClient.SqlException && ((System.Data.SqlClient.SqlException)(e)).Number > 90000) {
+                if ( (e is System.Data.SqlClient.SqlException && ((System.Data.SqlClient.SqlException)(e)).Number >= 50000) 
+                  || (e is System.Data.Odbc.OdbcException     && ((System.Data.Odbc.OdbcException)(e)).ErrorCode >= 50000 ) ) {
                     r.Errors = new List<BizValidationResult> { new BizValidationResult(e.Message) };
                 }
-                else r.Errors = new List<BizValidationResult> { new BizValidationResult(e.Message + "\n\n" + context + "\n\n" + e.StackTrace) };
+                else r.Errors = new List<BizValidationResult> { new BizValidationResult(
+                    "/*******数据驱动返回错误******/\n" + e.Message + "\n\n/*******   应用上下文   ******/\n" + context + "\n\n/*******.net 跟踪堆栈******/\n" + e.StackTrace) };
             }
 
             if (reThrow) throw new BizException(e.Message); //抛出异常以便回到最外层处理： 回滚
