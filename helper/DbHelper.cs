@@ -165,6 +165,17 @@ namespace l.core
         static public void RollbackTranscation(IDbTransaction tranction) {
             ((IDbTransaction)tranction).Rollback();
         }
+
+        static public void ExecuteBatchSql(IDbConnection connection, string sql)
+        {
+            Regex regex = new Regex("^GO", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+            string[] lines = regex.Split(sql);
+            foreach (var s in lines) {
+                ExecuteSql(connection, s, null);
+            }
+        }
+        
+
     }
     public class TranscationMgr
     {

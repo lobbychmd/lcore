@@ -63,6 +63,11 @@ namespace l.core
             
             l.Add(paramValue);
             ParamsValue[paramName]  = l;
+            /*if (paramName.IndexOf("UpdateFlag") == 0 ) {
+                var pp = (from i in _params where i.ParamName == paramName + ".count" select i);
+                if (pp.Count() > 0)  SetParamValue(paramName + ".count", l.Count);
+            }
+            */
             return this;
         }
 

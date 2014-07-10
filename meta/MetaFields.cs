@@ -82,6 +82,11 @@ namespace l.core
             return this;
         }
 
+        public FieldMetaHelper CheckSQLList(bool fill, Dictionary<string, DBParam> _params = null) {
+            foreach (var mf in fieldsmeta) mf.CheckSQLList(fill, _params);
+            return this;
+        }
+
         public void SetPointer(FieldMeta mf) {
             pointer = All.IndexOf(mf);
         }

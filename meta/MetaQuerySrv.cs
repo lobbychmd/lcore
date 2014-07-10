@@ -20,24 +20,33 @@ namespace l.core
         }
 
         private OrmHelper getOrm() {
-            return OrmHelper.From("metaSrv").F("SrvCode", "Name", "Summary", "QueryName", "Version", "HashCode").PK("SrvCode").Obj(this).End;
+            return OrmHelper.From("metaSrv").F("SrvCode", "Name", "QueryName", "Version", "IdField", "HashCode", "Summary").PK("SrvCode").Obj(this).End;
         }
 
         public QuerySrv Load() {
             var loaded = getOrm().Setup();
-            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) 
-                if (!VersionHelper.Helper.CheckNewAs<QuerySrv>(this, "MetaQuerySrv", new[] { "SrvCode" }, true)) loaded = getOrm().Setup();
+            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0)
+                if (!VersionHelper.Helper.CheckNewAs<QuerySrv>(this, "MetaDataPublishSrv", new[] { "SrvCode" }, true)) loaded = getOrm().Setup();
             if (!loaded) throw new Exception(string.Format("QuerySrv \"{0}\" does not exist.", SrvCode));
             return this;
         }
 
         public void Save()  { getOrm().Save(); }
+
+        public DataSet Execute(string id, Dictionary<string, object> _params, int limit) {
+            var q = new l.core.Query(QueryName).Load();
+            foreach (var i in _params)
+                q.SmartParams.SetParamValue(i.Key, i.Value);
+            if ( (IdField ??"").Trim() != "") q.SmartParams.SetParamValue(IdField, id);
+            return q.ExecuteQuery(null, 0, limit);
+        }
     }
 
     public class MetaQuerySrv {
         public string SrvCode { get; set; }
         public string Name { get; set; }
         public string Summary { get; set; }
+        public string IdField { get; set; }
         public string QueryName { get; set; }
     }
 }

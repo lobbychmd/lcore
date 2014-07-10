@@ -43,17 +43,18 @@ namespace l.core
 
         public bool Validate(Dictionary<string, DBParam> paramValues, dynamic owner, string ownerName) {
             var type = Type.ToUpper().Trim();
-            if (type.Equals("REQUIRED"))   {
+            if (type.Equals("REQUIRED"))
+            {
                 var v = Convert.ToString(paramValues[ParamToValidate].ParamValue);
-                return !string.IsNullOrEmpty(v) && v!="%" && v!="%%";
+                return !string.IsNullOrEmpty(v) && v != "%" && v != "%%";
             }
             else if (type.Equals("QUERY"))
-                using (var conn = Project.Current == null ? DBHelper.GetConnection(1) : Project.Current.GetConn(string.IsNullOrEmpty(owner.ConnAlias) ? null : owner.ConnAlias))
+                using (var conn = Project.Current == null ? DBHelper.GetConnection(1) : Project.Current.GetConn((owner.ConnAlias??"").Trim() == "" ? null : owner.ConnAlias))
                 {
                     return DBHelper.ExecuteQuery(conn, owner.ParamNamePrefixHandle(CheckSQL), paramValues).Rows.Count > 0;
                 }
             else if (type.Equals("SQL"))
-                using (var conn = Project.Current == null ? DBHelper.GetConnection(1) : Project.Current.GetConn(string.IsNullOrEmpty(owner.ConnAlias) ? null : owner.ConnAlias))
+                using (var conn = Project.Current == null ? DBHelper.GetConnection(1) : Project.Current.GetConn((owner.ConnAlias ?? "").Trim() == "" ? null : owner.ConnAlias))
                 {
                     var dt = DBHelper.ExecuteQuery(conn, owner.ParamNamePrefixHandle(CheckSQL), paramValues);
                     if (dt.Rows.Count == 0 || !dt.Columns.Contains("ResultCode"))

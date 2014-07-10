@@ -60,10 +60,87 @@ namespace l.core
     //全局的。每个用户都共享
     public class Project : MetaProject {
         public Dictionary<string, object> Params { get; set; }
+
         public Project(string frmConnKey = null, Dictionary<string, string> connMaps = null): base(frmConnKey, connMaps){
             Params = new Dictionary<string, object>();
         }
+
+        private OrmHelper getCloudOrm()  {  //云，用模拟器号做主键
+            return OrmHelper.From("metaProject").F("ProjectCode","ProjectName",  "SimulateCode", "StaConnectionString", "FrmConnectionString", "SyncPassword").PK("SimulateCode").Obj(this).End;
+        }
+        private OrmHelper getOrm()  //非云，用ProjectCode做主键
+        {
+            return OrmHelper.From("metaProject").F("ProjectCode", "ProjectName", "SimulateCode" ).PK("ProjectCode").Obj(this).End;
+        }
+
+        public string CloudUrl(string url) {  //用模拟器号 是否为空 代表是否云
+            return SimulateCode == null ? url : "/" + SimulateCode.ToString() + url;
+        }
+
+        public Project Load()  {
+            var loaded = getOrm().Setup();
+            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) if (!VersionHelper.Helper.CheckNewAs<Project>(this, "MetaProject", new string[] { }, true)) loaded = getOrm().Setup();
+            if (!loaded) throw new Exception(string.Format("Project \"{0}\" does not exist.", ProjectCode));
+            //checkHashCode();
+            SimulateCode = null;//用模拟器号 空 代表非云
+            return this;
+        }
+
+        public Project CloudLoad() {
+            getCloudOrm().Cloud(false).Setup();
+            if (VersionHelper.Helper != null) {
+                var prj = VersionHelper.Helper.GetAs<Project>("MetaProject", new Dictionary<string, string> { { "SimulateCode", SimulateCode } }) as Project;
+                if (prj != null && (ProjectName != prj.ProjectName || SyncPassword != prj.SyncPassword || ProjectCode != prj.ProjectCode))
+                {
+                    ProjectName = prj.ProjectName;
+                    SyncPassword = prj.SyncPassword;
+                    ProjectCode = prj.ProjectCode;
+                    using (var conn = l.core.DBHelper.GetConnection(0)) {
+                        DBHelper.ExecuteSql(conn,
+                            @"update metaProject set ProjectName = :ProjectName, SyncPassword = :SyncPassword, ProjectCode = :ProjectCode where SimulateCode = :SimulateCode
+                              if @@rowcount = 0 insert into metaProject(SimulateCode, ProjectName, ProjectCode, SyncPassword) values(:SimulateCode, :ProjectName, :ProjectCode, :SyncPassword)",
+                            new Dictionary<string , DBParam>{
+                                {"SimulateCode", new DBParam{ParamValue = SimulateCode}},
+                                {"SyncPassword", new DBParam{ParamValue = SyncPassword}},
+                                {"ProjectCode", new DBParam{ParamValue = ProjectCode}},
+                                {"ProjectName", new DBParam{ParamValue = ProjectName}}
+                            });
+
+                    }
+                }
+
+            }
+            //checkHashCode();
+            if (string.IsNullOrEmpty(FrmConnectionString)) {
+                var cloudDBSetting = System.Configuration.ConfigurationManager.AppSettings["CloudDBSetting"];
+                using (var conn = l.core.DBHelper.GetConnection("System.Data.SqlClient",  cloudDBSetting))  {
+                    FrmConnectionString = cloudDBSetting.Replace("=master;", "=idcclouddb" + SimulateCode + ";");
+                   // StaConnectionString = cloudDBSetting.Replace("=master;", "=sta" + SimulateCode + ";");
+                    using (var conn1 = l.core.DBHelper.GetConnection(0))
+                    {
+                        DBHelper.ExecuteSql(conn1,
+                            @"update metaProject set FrmConnectionString = :FrmConnectionString, StaConnectionString = :StaConnectionString where SimulateCode = :SimulateCode",
+                            new Dictionary<string, DBParam>{
+                                {"SimulateCode", new DBParam{ParamValue = SimulateCode}},
+                                {"FrmConnectionString", new DBParam{ParamValue = FrmConnectionString}},
+                                {"StaConnectionString", new DBParam{ParamValue = FrmConnectionString}}
+                            });
+
+                    }
+                    DBHelper.ExecuteSql(conn, string.Format("create database {0}  COLLATE  Chinese_PRC_CI_AS", "idcclouddb" + SimulateCode), null);
+                    //DBHelper.ExecuteSql(conn, "create database sta" + SimulateCode, null);
+                }
+            }
+            return this;
+        }
+
+        public void Save()
+        {
+
+            getOrm().Save();
+        }
         static public Project Current;
+        static public Project Root;
     }
 
     //下面是通用模型
@@ -80,7 +157,16 @@ namespace l.core
         [Required]
         private string frmConnKey;
         private Dictionary<string, string> connMapInfo  { get; set; }
-        
+
+        public string SimulateCode { get; set; }
+        public string ProjectName { get; set; }
+        public string Version { get; set; }
+        public string FrmConnectionString { get; set; }
+        public string StaConnectionString { get; set; }
+        public string SyncPassword { get; set; }
+        public string ProjectCode { get; set; }
+        public Dictionary<string, object> Params { get; set; }
+
         public MetaProject(string frmConnKey , Dictionary<string, string> connMaps) {
             var dcsf = DBHelper.DefaultConnectionStringPrefix;
             if (frmConnKey == null) frmConnKey= dcsf + "0";
@@ -103,11 +189,14 @@ namespace l.core
         }
 
         public System.Data.IDbConnection GetFrmConn() {
-            return l.core.DBHelper.GetConnection(frmConnKey);
+            return !string.IsNullOrEmpty(FrmConnectionString) ? DBHelper.GetConnection("System.Data.SqlClient", FrmConnectionString) : DBHelper.GetConnection(frmConnKey);
         }
 
         public System.Data.IDbConnection GetConn(string aliasName = null)
         {
+            if (!string.IsNullOrEmpty(StaConnectionString))
+                return DBHelper.GetConnection("System.Data.SqlClient", StaConnectionString);
+
             var n = aliasName == null? connMapInfo.First().Value : connMapInfo.ContainsKey(aliasName)?connMapInfo[aliasName]:null;
             if (n == null) throw new Exception(string.Format("业务库别名\"{0}\" 未在系统定义.", aliasName));
             return l.core.DBHelper.GetConnection(n);
@@ -115,7 +204,7 @@ namespace l.core
     }
 
     public class Connection : MetaConnection  {
-         private OrmHelper getOrm() {
+        private OrmHelper getOrm() {
              return OrmHelper.From("metaConnection").F("Summary", "Alias").PK("Alias").Obj(this).End; ; 
         }
         

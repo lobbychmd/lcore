@@ -35,7 +35,7 @@ namespace l.core
                 PickList = true; //应用在 共通资料上的StdQuery 作为填充应用
             } 
             if (PickList) //填充
-                using (var conn = DBHelper.GetConnection(1)) {
+                using (var conn = Project.Current== null?  DBHelper.GetConnection(1):l.core.Project.Current.GetConn()) {
                     var mf = (from i in fms where i.FieldName == KeyFields[0] select i).First();
                     l.core.MetaQuery SearchListQuery =
                         (SearchQuery != null )? new l.core.Query(SearchQuery).Load()
@@ -50,7 +50,7 @@ namespace l.core
             
             //构造字段(lookup)
             if ((table != null) && (!String.IsNullOrEmpty(LookupQuery) && (LookupQuery!="DO"))) {
-                using (var conn = DBHelper.GetConnection(1)) {
+                using (var conn = Project.Current== null?  DBHelper.GetConnection(1):l.core.Project.Current.GetConn()) {
                     var q = new l.core.Query(LookupQuery).Load();
                     DataSet ds = q.Prepare(conn, false);
                     foreach (string s in LookupFields) { 
@@ -77,7 +77,7 @@ namespace l.core
         public void BindData(DataTable table, Dictionary<string, object> sysParamValues, bool ignoreLastRow = true) {
             if ((table != null) && (!String.IsNullOrEmpty(LookupQuery) && (LookupQuery != "DO"))) {
                 if (needBind(table)) {
-                    using (var conn = DBHelper.GetConnection(1))  {
+                    using (var conn = Project.Current== null?  DBHelper.GetConnection(1):l.core.Project.Current.GetConn())  {
                         var q = new l.core.Query(LookupQuery).Load();
                         for (int i = 0; i < table.Rows.Count - (ignoreLastRow ? 1 : 0); i++) {
                             foreach (string s in KeyFields)

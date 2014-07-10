@@ -27,12 +27,13 @@ namespace l.core
         }
 
         public string Select() {
-            return string.Format("select {0} from {1} where {2}", 
+            return string.Format("select {0} from {1} {2} {3}", 
                 fields!=null && fields.Count() >0 ?
                     string.Join(", ", fields.Select(p => string.Format("{0}=[{1}]", p, p.Substring(PrefixLength))))
                     :"*",
-                tableName, 
-                string.Join(" and ", pk.Select(p=> string.Format("[{0}]=:{1}", p, p))));
+                tableName,
+                pk == null ? "" : "where",
+                pk == null ? "" : string.Join(" and ", pk.Select(p=> string.Format("[{0}]=:{1}", p, p))));
         }
 
         public string Insert() {
@@ -51,11 +52,13 @@ namespace l.core
         }
 
         public string Delete() {
-            return string.Format("delete  from {0} where {1}", tableName, string.Join(" and ", pk.Select(p => "[" + p + "] = :" + p.Substring(PrefixLength))));
+            return string.Format("delete  from {0} {1} {2}", tableName, pk == null ? "" : "where", pk == null ? "" : string.Join(" and ", pk.Select(p => "[" + p + "] = :" + p.Substring(PrefixLength))));
         }
 
         static public SQLHelper From(string tableName) {
             return new SQLHelper(tableName);
         }
+
+
     }
 }

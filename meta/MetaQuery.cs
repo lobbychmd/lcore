@@ -229,7 +229,7 @@ namespace l.core
         }
 
         private DataSet Execute(IDbConnection conn , int queryType, int startRecord, int count, bool allowSqlError) {
-            var connection = conn == null ? Project.Current ==null? DBHelper.GetConnection(1): Project.Current.GetConn(string.IsNullOrEmpty( ConnAlias)? null: ConnAlias) : null;
+            var connection = conn == null ? Project.Current ==null? DBHelper.GetConnection(1): Project.Current.GetConn((ConnAlias??"").Trim() == ""? null: ConnAlias) : null;
             try {
                 DataSet ds = new DataSet();
                 int i = 0;

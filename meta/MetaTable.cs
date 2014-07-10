@@ -12,7 +12,7 @@ namespace l.core
 {
     public class Table : MetaTable {
         public string HashCode { get; set; }
-        private MetaTable clone;
+        //private MetaTable clone;
         public Table(string tableName) {
             this.TableName = tableName;
         }
@@ -24,15 +24,24 @@ namespace l.core
         }
 
         private OrmHelper getOrm() {
-            return OrmHelper.From("metaTable").Obj(this).F("TableName", "TableSummary", "HashCode", "Version").PK("TableName").End
-                .SubFrom("metaTableColumn").Obj( Columns).End
-                .SubFrom("metaTableIndex").Obj(Indexes).End;
+            return OrmHelper.From("metaTable").F("TableName", "TableSummary", "HashCode", "Version").PK("TblName").MF("TableName", "TblName")
+                .MF("TableSummary", "TblSummary").Obj(this).End
+                .SubFrom("metaTableColumn").MF("TableName", "TblName").MF("Selection", null).Obj( Columns).End
+                .SubFrom("metaTableIndex").MF("TableName", "TblName").MF("Cols", null).Obj(Indexes).End;
         }
 
         public Table Load() {
             var loaded = getOrm().Setup();
-            clone = Newtonsoft.Json.JsonConvert.DeserializeObject<MetaTable>(Newtonsoft.Json.JsonConvert.SerializeObject(this));
-            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) if (!VersionHelper.Helper.CheckNewAs<Table>(this, "MetaTable", new[] { "TableName" }, true)) loaded = getOrm().Setup();
+            //clone = Newtonsoft.Json.JsonConvert.DeserializeObject<MetaTable>(Newtonsoft.Json.JsonConvert.SerializeObject(this));
+            
+            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) {
+                var newtb = VersionHelper.Helper.GetAs<Table>("MetaTable", new Dictionary<string, string> { { "TableName", TableName } }) as Table;
+                if (Sync(null, newtb)) {
+                    if (!VersionHelper.Helper.CheckNewAs<Table>(this, "MetaTable", new[] { "TableName" }, true)) 
+                        loaded = getOrm().Setup();
+                }
+                //Sync(null);
+            }
             if (!loaded) throw new Exception(string.Format("Table \"{0}\" does not exist.", TableName));
             else if (Columns.Count == 0) throw new Exception(string.Format("Table \"{0}\" does not include any columns.", TableName));
             //checkHashCode();
@@ -40,29 +49,47 @@ namespace l.core
         }
 
         public void Save( ) {
+            //SaveAndSync(null);
             getOrm().Save( );
         }
 
-        public void SaveAndSync( IDbConnection conn)
-        {
+        public void SaveAndSync( IDbConnection conn)  {
             getOrm().Saves(p => {
-                string sql = clone.Columns.Count == 0 ? Create()
-                    : string.Join("n", Columns.Where(p1 => clone.Columns.Find(p2=>p2.ColumnName == p1.ColumnName) == null).Select(c => string.Format("alter table {0} add {1} {2} {3} {4}  ",
-                            TableName, c.ColumnName, GetDBType(c), GetDBTypeEx(c),c.AllowNull ? "null" : "not null"
-                            ))) +
-                       string.Join("\n", clone.Columns.Where(p1 => Columns.Find(p2 => p2.ColumnName == p1.ColumnName) == null).Select(c => string.Format("alter table {0} drop column {1}   ",
-                            TableName, c.ColumnName
-                            )));
-                if (!string.IsNullOrEmpty(sql))
-                    try { DBHelper.ExecuteSql(conn, sql, null); }
-                    catch (Exception e) {
-                        throw new Exception(e.Message + "\n" + sql);
-                    }
-                return true;
+                Sync(conn, null); return true;
             });
                  
         }
-
+        public bool Sync( IDbConnection conn, Table newTable)  {
+            var connection = conn == null ? Project.Current == null ? DBHelper.GetConnection(1) : Project.Current.GetConn(  null ) : null;
+            try{
+                string sql = Columns.Count == 0 ? Create()
+                    : string.Join("n", newTable.Columns.Where(p1 => {
+                                var pold = Columns.Find(p2 => p2.ColumnName == p1.ColumnName);
+                                return (pold != null) && (pold.AllowNull != p1.AllowNull || pold.IsIdentity != p1.IsIdentity || pold.Precision != p1.Precision || pold.Scale != p1.Scale || pold.Size != p1.Size || pold.Type != p1.Type);
+                                }).Select(c => string.Format("alter table {0} alter column {1} {2} {3} {4}  ",
+                            TableName, c.ColumnName, GetDBType(c), GetDBTypeEx(c),c.AllowNull ? "null" : "not null"
+                            ))) +
+                    string.Join("\n", newTable.Columns.Where(p1 => Columns.Find(p2 => p2.ColumnName == p1.ColumnName) == null).Select(c => string.Format("alter table {0} add {1} {2} {3} {4}  ",
+                            TableName, c.ColumnName, GetDBType(c), GetDBTypeEx(c), c.AllowNull ? "null" : "not null"
+                            ))) +
+                        string.Join("\n", Columns.Where(p1 => newTable.Columns.Find(p2 => p2.ColumnName == p1.ColumnName) == null).Select(c => string.Format("alter table {0} drop column {1}   ",
+                            TableName, c.ColumnName
+                            )));
+                if (!string.IsNullOrEmpty(sql))
+                    try { 
+                        DBHelper.ExecuteSql(conn ?? connection, sql, null);
+                        return true;
+                    }
+                    catch (Exception e) {
+                        throw new Exception(e.Message + "\n" + sql);
+                    }
+                else return true;
+            }
+            finally {
+                if (conn == null) connection.Dispose();
+            }
+                 
+        }
         static public void UpdateAll(IDbConnection conn) { 
             if (l.core.VersionHelper.Helper != null)   {
                 l.core.MetaTable[] tables = l.core.VersionHelper.Helper.GetAs<l.core.MetaTable[]>("MetaTable.category", null) as l.core.MetaTable[];

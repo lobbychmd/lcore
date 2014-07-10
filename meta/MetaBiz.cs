@@ -149,7 +149,7 @@ namespace l.core
         {
             var t1 = DateTime.Now;
             validateSelf();
-            var connection = conn == null ? Project.Current == null ? DBHelper.GetConnection(1) : Project.Current.GetConn(string.IsNullOrEmpty(ConnAlias) ? null : ConnAlias) : null;
+            var connection = conn == null ? Project.Current == null ? DBHelper.GetConnection(1) : Project.Current.GetConn((ConnAlias??"").Trim() == "" ? null : ConnAlias) : null;
             try {
                 BizResult r = new BizResult ();
                 IDbTransaction trans =  DBHelper.GetTranscation(conn ?? connection);
@@ -226,28 +226,36 @@ namespace l.core
 
                 var p2v = Params.Find(p => p.ParamName ==  c.ParamToValidate);
                 if (p2v == null) throw new Exception(string.Format("Biz \"{0}\" 的检查 \"{1}\" 参数是 \"{2}\"，但并未定义.", BizID, c.CheckSummary, c.ParamToValidate));
-                if (p2v.ParamRepeated != c.CheckRepeated) throw new Exception(string.Format("Biz \"{0}\" 的检查 \"{1}\" 的重复设置跟待检查的参数不一致.", BizID, c.CheckSummary));
-                var par = Params.Find(p => p.ParamName == (string.IsNullOrEmpty( c.CheckUpdateFlag) ? c.ParamToValidate : c.CheckUpdateFlag));
-                //if ((par == null ) || (!par.ParamRepeated)){
-                if(!c.CheckRepeated){
-                    if (!c.Validate(pv, this, "biz \"" + BizID + "\"")) yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate }, c.CheckType == CheckType.etWarning);
-                }else {
-                    if (par == null) throw new Exception(string.Format("Biz \"{0}\" 的检查 \"{1}\" 未能确定更新标志参数，可能未定义UpdateFlag参数.", BizID, c.CheckSummary));
-                    var paramsName = (from Match m in new Regex(":([a-zA-z_]+)").Matches(c.CheckSQL ?? "") select m.Value.Substring(1))
-                        .Union(new[] { par.ParamName, c.ParamToValidate });
-                    if (!string.IsNullOrEmpty(c.ParamToCompare)) paramsName = paramsName.Union(new []{c.ParamToCompare});
-                    int i = 0;
-                    List<Dictionary<string, DBParam>> pl = null;
-                    try {pl = SmartParams.GetDBParamsSet(Params, paramsName, SmartParams.GetParamCount(par.ParamName));
+                if (c.Type.ToUpper().Equals("EXISTS")) {
+                    if (SmartParams.GetParamCount(c.ParamToValidate) == 0)
+                    yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate }, c.CheckType == CheckType.etWarning);
+                }
+                else {
+                    if (p2v.ParamRepeated != c.CheckRepeated) throw new Exception(string.Format("Biz \"{0}\" 的检查 \"{1}\" 的重复设置跟待检查的参数不一致.", BizID, c.CheckSummary));
+                    var par = Params.Find(p => p.ParamName == (string.IsNullOrEmpty( c.CheckUpdateFlag) ? c.ParamToValidate : c.CheckUpdateFlag));
+                    //if ((par == null ) || (!par.ParamRepeated)){
+
+                
+                    if(!c.CheckRepeated){
+                        if (!c.Validate(pv, this, "biz \"" + BizID + "\"")) yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate }, c.CheckType == CheckType.etWarning);
+                    }else {
+                        if (par == null) throw new Exception(string.Format("Biz \"{0}\" 的检查 \"{1}\" 未能确定更新标志参数，可能未定义UpdateFlag参数.", BizID, c.CheckSummary));
+                        var paramsName = (from Match m in new Regex(":([a-zA-z_][a-zA-z_\\d]+)").Matches(c.CheckSQL ?? "") select m.Value.Substring(1))
+                            .Union(new[] { par.ParamName, c.ParamToValidate });
+                        if (!string.IsNullOrEmpty(c.ParamToCompare)) paramsName = paramsName.Union(new []{c.ParamToCompare});
+                        int i = 0;
+                        List<Dictionary<string, DBParam>> pl = null;
+                        try {pl = SmartParams.GetDBParamsSet(Params, paramsName, SmartParams.GetParamCount(par.ParamName));
+                            }
+                        catch(Exception e){
+                            throw new Exception( string.Format("Biz \"{0}\" 业务检查 \"{1}\"执行中, ", BizID, c.CheckSummary) + e.Message);
                         }
-                    catch(Exception e){
-                        throw new Exception( string.Format("Biz \"{0}\" 业务检查 \"{1}\"执行中, ", BizID, c.CheckSummary) + e.Message);
+                        foreach(var p in pl){
+                                if (!c.Validate(p, this, "biz \"" + "\""))
+                                    yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate + "." + i.ToString(),  }, c.CheckType == CheckType.etWarning);
+                            i++;                            
+                        };
                     }
-                    foreach(var p in pl){
-                            if (!c.Validate(p, this, "biz \"" + "\""))
-                                yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate + "." + i.ToString(),  }, c.CheckType == CheckType.etWarning);
-                        i++;                            
-                    };
                 }
             }
         }

@@ -57,6 +57,12 @@ namespace l.core
     {
         private bool frm;
         private List<OrmConfig> config;
+        private bool cloud;
+
+        public OrmHelper Cloud(bool support) {
+            cloud = support;
+            return this;
+        }
 
         static public OrmConfig From(string tableName, bool frm = true) {
             var h = new OrmHelper { config = new List<OrmConfig> { new OrmConfig { TableName = tableName } } ,frm = frm};
@@ -75,27 +81,29 @@ namespace l.core
 
         public OrmHelper() {
             config = new List<OrmConfig>();
+            cloud = true;
         }
 
         private Dictionary<string, DBParam> obj2DbParams(OrmConfig c, string[] fields, params object[] objs ) {
             var result = new Dictionary<string, DBParam>();
-            fields.ToList().ForEach(f =>{
-                var m = (from i in c.matchSetting where i.Value == f select i);
-                string matchField = m.Count() == 0 ? f : m.First().Key;
-                if (!string.IsNullOrEmpty( matchField)){
-                    object v = null;
-                    foreach(var obj in objs){
-                        if (v==null) {
-                            var p = obj.GetType().GetProperty(matchField);
-                            if (p !=null) {
-                                v =p.GetValue(obj, null);
-                                break;
+            if (fields != null)
+                fields.ToList().ForEach(f =>{
+                    var m = (from i in c.matchSetting where i.Value == f select i);
+                    string matchField = m.Count() == 0 ? f : m.First().Key;
+                    if (!string.IsNullOrEmpty( matchField)){
+                        object v = null;
+                        foreach(var obj in objs){
+                            if (v==null) {
+                                var p = obj.GetType().GetProperty(matchField);
+                                if (p !=null) {
+                                    v =p.GetValue(obj, null);
+                                    break;
+                                }
                             }
                         }
+                        result[f] = new DBParam { ParamValue = v };
                     }
-                    result[f] = new DBParam { ParamValue = v };
-                }
-            });
+                });
             return result;
         }
 
@@ -128,7 +136,7 @@ namespace l.core
         }
 
         public void Saves( Func<object, bool> beforeCommit) {
-            using (var conn = DBHelper.GetConnection(frm?0:1))   {
+            using (var conn = Project.Current != null && cloud? (frm?Project.Current.GetFrmConn(): Project.Current.GetConn()): DBHelper.GetConnection(frm?0:1))   {
                 var trans = DBHelper.GetTranscation(conn);
                 try{
                     foreach (var i in saveSQL()) {
@@ -144,7 +152,7 @@ namespace l.core
                 }
                 catch {
                     DBHelper.RollbackTranscation(trans);
-                    throw ;
+                     throw ;
                 }
             }
         }
@@ -167,16 +175,17 @@ namespace l.core
 
         private DataTable select(OrmConfig c, object obj)
         {
-            using (var conn = DBHelper.GetConnection(frm?0:1))
+            using (var conn = Project.Current != null && cloud ? (frm ? Project.Current.GetFrmConn() : Project.Current.GetConn()) : DBHelper.GetConnection(frm ? 0 : 1))   
             {
                 var pkFields = c.PKey;//.Select(p => c.matchSetting.ContainsKey(p) ? c.matchSetting[p] : p).ToArray();
                 var pkValues = new Dictionary<string, DBParam>();
-                foreach(var f in c.PKey){
-                    var m = (from i in c.matchSetting where i.Value == f select i);
-                    string matchField = m.Count() == 0 ? f : m.First().Key;
-                    //pkValues[matchField] = new DBParam { ParamValue = obj.GetType().GetProperty(f).GetValue(obj, null) };
-                    pkValues[f] = new DBParam { ParamValue = obj.GetType().GetProperty(matchField).GetValue(obj, null) };
-                }
+                if (c.PKey != null)
+                    foreach(var f in c.PKey){
+                        var m = (from i in c.matchSetting where i.Value == f select i);
+                        string matchField = m.Count() == 0 ? f : m.First().Key;
+                        //pkValues[matchField] = new DBParam { ParamValue = obj.GetType().GetProperty(f).GetValue(obj, null) };
+                        pkValues[f] = new DBParam { ParamValue = obj.GetType().GetProperty(matchField).GetValue(obj, null) };
+                    }
                 return DBHelper.ExecuteQuery(conn, SQLHelper.From(c.TableName).PK(pkFields).Select(),  pkValues);
             }
         }

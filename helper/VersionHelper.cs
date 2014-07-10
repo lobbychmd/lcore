@@ -14,6 +14,11 @@ namespace l.core
         List<string> Action { get; set; }
 
         void InvokeRec<T>(object obj, string metaType, string[] keyFields, string ParamsValue, int timeCost);
+
+        string GetMetaDDL();
+        string GetBizDDL();
+        string GetInitDDL();
+        string GetInitFrmDDL();
     }
 
     public class VersionHelper {
