@@ -28,7 +28,9 @@ namespace l.core
         }
 
         private void children(MenuItem mi, DataTable dtModule, DataTable dtModulePower , DataTable dtMenu, List<MetaModule> modules) {
-            foreach (System.Data.DataRowView dr in new DataView(dtMenu, "ParentID='" + (mi.ModuleID??"") + "'", "ModuleID", DataViewRowState.CurrentRows))
+            var v = new DataView(dtMenu, "ParentID='" + (mi.ModuleID ?? "") + "'", "ModuleID", DataViewRowState.CurrentRows);
+            v.Sort = "Idx";
+            foreach (System.Data.DataRowView dr in v)
             {
                 var mid =dr.Row["ModuleID"].ToString();
                 var m = dtModule.DefaultView.Find(mid);
@@ -53,6 +55,7 @@ namespace l.core
         public void Load(DataTable dtModule, DataTable dtModulePower , DataTable dtMenu, List<MetaModule> modules) {
             dtModulePower.DefaultView.Sort = "FuncID";
             dtModule.DefaultView.Sort = "ModuleID";
+            //dtMenu.DefaultView.Sort = "Idx";
             children(this, dtModule, dtModulePower, dtMenu, modules);
         }
     }
