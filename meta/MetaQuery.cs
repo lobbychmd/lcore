@@ -339,7 +339,8 @@ namespace l.core
                 var paramsName = (from Match m in new Regex(":([a-zA-z_]+)").Matches(c.CheckSQL ?? "") select m.Value.Substring(1))
                     .Union(new[] { c.ParamToValidate });
                 if (!string.IsNullOrEmpty(c.ParamToCompare)) paramsName = paramsName.Union(new[] { c.ParamToCompare });
-                if (!c.Validate(pv, this, "query \"" + QueryName + "\"")) yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate }, c.CheckType == CheckType.etWarning);
+                object errorMessageEx = null;
+                if (!c.Validate(pv, this, "query \"" + QueryName + "\"", out errorMessageEx)) yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate }, c.CheckType == CheckType.etWarning);
             }
         }
 

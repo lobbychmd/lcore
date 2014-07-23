@@ -5,6 +5,7 @@ using System.Text;
 using System.Data;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using RazorEngine;
 
 namespace l.core
 {
@@ -146,7 +147,13 @@ namespace l.core
         public SmartLookup[] Lookups { get { 
                 if (lookups == null ){
                     if (pagelookup != null && !string.IsNullOrEmpty(pagelookup.Trim()))
-                        try { lookups = Newtonsoft.Json.JsonConvert.DeserializeObject<SmartLookup[]>(pagelookup); }
+                        try {
+                            string template = pagelookup;
+                            string result = Razor.Parse(template, new { Name = "World" });
+                            if (!string.IsNullOrEmpty(result.Trim()))
+                                lookups = Newtonsoft.Json.JsonConvert.DeserializeObject<SmartLookup[]>(result);
+                            else lookups = new SmartLookup[] { };
+                        }
                         catch (Exception e) { lookups = null; throw new Exception(string.Format("页面 \"{0}\" 获取关联设置格式出错.\n", PageID) + e.Message); }
                     else lookups = new SmartLookup[]{};
                 }

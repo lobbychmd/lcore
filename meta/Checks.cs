@@ -41,7 +41,8 @@ namespace l.core
         }
 
 
-        public bool Validate(Dictionary<string, DBParam> paramValues, dynamic owner, string ownerName) {
+        public bool Validate(Dictionary<string, DBParam> paramValues, dynamic owner, string ownerName, out object errorMessageEx) {
+            errorMessageEx = null;
             var type = Type.ToUpper().Trim();
             if (type.Equals("REQUIRED"))
             {
@@ -60,6 +61,23 @@ namespace l.core
                     if (dt.Rows.Count == 0 || !dt.Columns.Contains("ResultCode"))
                         throw new CheckException(string.Format("SQL 类型的检查({0})必须返回一个ResultCode 字段.", CheckSummary));
                     return dt.Rows[0]["ResultCode"].ToString() == "0";
+                }
+            else if (type.Equals("QUERYGRID"))
+                using (var conn = Project.Current == null ? DBHelper.GetConnection(1) : Project.Current.GetConn((owner.ConnAlias ?? "").Trim() == "" ? null : owner.ConnAlias))
+                {
+                    System.Data.DataTable dtx = DBHelper.ExecuteQuery(conn, owner.ParamNamePrefixHandle(CheckSQL), paramValues);
+                    var succ = dtx.Rows.Count == 0;
+                    if (!succ) {
+                        new l.core.FieldMetaHelper().Ready(dtx);
+                        var fields = from System.Data.DataColumn dc in dtx.Columns select dc;
+                        var rows = from System.Data.DataRow dr in dtx.Rows select fields.Select(p => dr[p]);
+                        errorMessageEx = new
+                        {
+                            fields = fields.Select(p=>p.Caption),
+                            rows = rows
+                        };
+                    };
+                    return succ;
                 }
             else if (type.Equals("COMPARETO"))
             {

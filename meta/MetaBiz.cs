@@ -237,7 +237,11 @@ namespace l.core
 
                 
                     if(!c.CheckRepeated){
-                        if (!c.Validate(pv, this, "biz \"" + BizID + "\"")) yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate }, c.CheckType == CheckType.etWarning);
+                        object errorMessageEx = null;
+                        if (!c.Validate(pv, this, "biz \"" + BizID + "\"", out errorMessageEx))
+                            yield return new BizValidationResult(errorMessageEx == null ? c.CheckSummary :
+                                Newtonsoft.Json.JsonConvert.SerializeObject(new { Summary = c.CheckSummary, Data = errorMessageEx }),
+                                new[] { c.ParamToValidate }, c.CheckType == CheckType.etWarning);
                     }else {
                         if (par == null) throw new Exception(string.Format("Biz \"{0}\" 的检查 \"{1}\" 未能确定更新标志参数，可能未定义UpdateFlag参数.", BizID, c.CheckSummary));
                         var paramsName = (from Match m in new Regex(":([a-zA-z_][a-zA-z_\\d]+)").Matches(c.CheckSQL ?? "") select m.Value.Substring(1))
@@ -251,8 +255,9 @@ namespace l.core
                             throw new Exception( string.Format("Biz \"{0}\" 业务检查 \"{1}\"执行中, ", BizID, c.CheckSummary) + e.Message);
                         }
                         foreach(var p in pl){
-                                if (!c.Validate(p, this, "biz \"" + "\""))
-                                    yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate + "." + i.ToString(),  }, c.CheckType == CheckType.etWarning);
+                            object errorMessageEx = null;
+                            if (!c.Validate(p, this, "biz \"" + "\"", out errorMessageEx))
+                                yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate + "." + i.ToString(),  }, c.CheckType == CheckType.etWarning);
                             i++;                            
                         };
                     }
