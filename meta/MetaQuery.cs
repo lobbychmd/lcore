@@ -184,18 +184,16 @@ namespace l.core
         private DataTable executeQuery(IDbConnection conn, QueryScript item, Dictionary<string, DBParam> @params, int p1, int p2, bool allowSqlError, bool sqlrazor){
             var t1 = DateTime.Now;
             try{
-                string template = SmartParams.ParamNamePrefixHandle(Params, item.Script);
+                string tsql = SmartParams.ParamNamePrefixHandle(Params, item.Script);
                 if (sqlrazor){
-                    template = template.Replace("@", "^^^^").Replace("$", "@");
-                    string result = Razor.Parse(template, new { StoreNO = "xx" });
-                    template = template.Replace("^^^^", "@");
+                    tsql = l.core.SmartScript.Eval(tsql,  @params.ToDictionary(p => p.Key, q => Convert.ToString(q.Value.ParamValue.ToString())) );
                 }
 
                 BizResult r = new BizResult ();
                 r.Errors =  Validate(null).ToList();
                 if (!r.IsValid) throw new CheckException(string.Join("\n", r.Errors.Select(p=>p.ErrorMessage)));
 
-                var dt = DBHelper.ExecuteQuery(conn, template, @params, p1, p2);
+                var dt = DBHelper.ExecuteQuery(conn, tsql, @params, p1, p2);
 
                 string meta = Newtonsoft.Json.JsonConvert.SerializeObject(
                         from System.Data.DataColumn c in dt.Columns select new { n = c.ColumnName, t = c.DataType.ToString() });

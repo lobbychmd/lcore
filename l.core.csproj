@@ -100,6 +100,7 @@
     <Compile Include="meta\MetaProject.cs" />
     <Compile Include="OAuth.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SmartScript.cs" />
     <Compile Include="SqlHelper.cs" />
   </ItemGroup>
   <ItemGroup />

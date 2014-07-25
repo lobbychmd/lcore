@@ -148,10 +148,10 @@ namespace l.core
                 if (lookups == null ){
                     if (pagelookup != null && !string.IsNullOrEmpty(pagelookup.Trim()))
                         try {
-                            string template = pagelookup;
-                            string result = Razor.Parse(template, new { Name = "World" });
-                            if (!string.IsNullOrEmpty(result.Trim()))
-                                lookups = Newtonsoft.Json.JsonConvert.DeserializeObject<SmartLookup[]>(result);
+                            pagelookup = l.core.SmartScript.Eval(pagelookup, null);
+
+                            if (!string.IsNullOrEmpty(pagelookup.Trim()))
+                                lookups = Newtonsoft.Json.JsonConvert.DeserializeObject<SmartLookup[]>(pagelookup);
                             else lookups = new SmartLookup[] { };
                         }
                         catch (Exception e) { lookups = null; throw new Exception(string.Format("页面 \"{0}\" 获取关联设置格式出错.\n", PageID) + e.Message); }
@@ -165,7 +165,12 @@ namespace l.core
         public PageFlowItem[] Flows { get {
                 if (flows == null) {
                     if (pageflow != null && !string.IsNullOrEmpty(pageflow.Trim())){
-                        try { flows = Newtonsoft.Json.JsonConvert.DeserializeObject<PageFlowItem[]>(pageflow); }
+                        try {
+                            pageflow = l.core.SmartScript.Eval(pageflow, null);
+
+                            if (!string.IsNullOrEmpty(pageflow.Trim()))  flows = Newtonsoft.Json.JsonConvert.DeserializeObject<PageFlowItem[]>(pageflow);
+                            else flows = new PageFlowItem[] {};
+                        }
                         catch (Exception e) { flows = null; throw new Exception(string.Format("页面 \"{0}\" 获取流程设置格式出错.\n", PageID) + e.Message); }
 
                         if (flows != null)
