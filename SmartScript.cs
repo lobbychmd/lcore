@@ -24,10 +24,10 @@ namespace l.core
                 f = null;
             }
             if (f == null) {
-                var __SysParams = new l.core.Query("__SysParams").Load();
-                var ds = __SysParams.ExecuteQuery();
                 try
                 {
+                    var __SysParams = new l.core.Query("__SysParams").Load();
+                    var ds = __SysParams.ExecuteQuery();
                     f =new SysParamsItem{ ProjectCode =  projectCode, Expired = DateTime.Now.AddMinutes(60), Params = (from System.Data.DataRow dr in ds.Tables[0].Rows select dr)
                         .ToDictionary(
                             p => p["name"].ToString(),
@@ -36,10 +36,11 @@ namespace l.core
                     SysParams.Add(f);
                 }
                 catch {
+                    SysParams.Add(new SysParamsItem { ProjectCode = projectCode, Expired = DateTime.Now.AddMinutes(60) });
                 }
 
             }
-            return f.Params;
+            return (f ?? SysParams.Find(p => p.ProjectCode == projectCode)).Params;
         }
 
         static public string Eval(string script, Dictionary<string, string> @params) {
