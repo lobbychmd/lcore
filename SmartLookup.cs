@@ -87,7 +87,7 @@ namespace l.core
                             DataSet ds = q.ExecuteDataObject(conn, false);
                             if (ds.Tables[0].Rows.Count > 0)
                                 foreach (string ss in LookupFields)  {
-                                    table.Rows[i][ss] = ds.Tables[0].Rows[0][ss];
+                                    if (table.Columns[ss].ExtendedProperties.ContainsKey("lookup")) table.Rows[i][ss] = ds.Tables[0].Rows[0][ss];
                                 }
                         }
                     }

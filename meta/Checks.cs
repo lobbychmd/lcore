@@ -107,6 +107,7 @@ namespace l.core
                     else if (CompareType == ">") return Convert.ToDateTime(v1) > Convert.ToDateTime(v2);
                     else if (CompareType == "<") return Convert.ToDateTime(v1) < Convert.ToDateTime(v2);
                     else if (CompareType == ">=") return Convert.ToDateTime(v1) >= Convert.ToDateTime(v2);
+                    else if (CompareType == "<=") return Convert.ToDateTime(v1) <= Convert.ToDateTime(v2);
                     else if (CompareType == "<>") return Convert.ToDateTime(v1) != Convert.ToDateTime(v2);
                     else return true;
                 }

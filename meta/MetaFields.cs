@@ -258,6 +258,21 @@ namespace l.core
         #endregion
 
         private Dictionary<string, string> list;
+        private void mergeDic() {
+            if (!string.IsNullOrEmpty(DicNO))
+            {
+                var newlist = new Dictionary<string, string> ();
+                var dic = new Dic(DicNO).Load();
+                dic.Dtl.ForEach(p => {
+                    if (list.Count == 0 || list.ContainsKey(p.DicDtlNO))
+                        newlist[p.DicDtlNO + "." + p.DicDtlValue] = p.DicDtlValue;
+                });
+                list.Clear();
+                foreach(var i in newlist){
+                    DropDownList[i.Key] = i.Value;
+                }
+            }
+        }
         public Dictionary<string, string> DropDownList { get {
             if (list == null) {
                 list = string.IsNullOrEmpty(Selection) ||
@@ -266,10 +281,7 @@ namespace l.core
                     p => string.IsNullOrEmpty(p) ? "" : p.Split('.')[0],
                     q => string.IsNullOrEmpty(q) ? "" : q.Split('.').Count() == 1 ? q : q.Substring(q.IndexOf('.') + 1)
                 );
-                if (!string.IsNullOrEmpty(DicNO))  {
-                    var dic = new Dic(DicNO).Load();
-                    dic.Dtl.ForEach(p => list[p.DicDtlNO + "." + p.DicDtlValue] = p.DicDtlValue);
-                }
+                mergeDic();
             }
             return list;
         }
@@ -315,6 +327,7 @@ namespace l.core
                         }
                     }
                 }
+                mergeDic();
             }
             return q;
         }

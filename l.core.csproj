@@ -73,6 +73,8 @@
     <Compile Include="Expression.cs" />
     <Compile Include="meta\Checks.cs" />
     <Compile Include="meta\MetaBizSrv.cs" />
+    <Compile Include="meta\MetaDataSubscribeSrv.cs" />
+    <Compile Include="meta\MetaExternalSrv.cs" />
     <Compile Include="meta\MetaQuerySrv.cs" />
     <Compile Include="meta\SysTableMeta.cs" />
     <Compile Include="pinyin.cs" />
