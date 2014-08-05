@@ -15,6 +15,7 @@ namespace l.core
         public string HashCode { get; set; }
         new public ParamsHelper SmartParams { get { return base.SmartParams; } }
 
+        
         public Biz(string bizID) {
             this.BizID = bizID;
             Scripts = new List<BizScript>();
@@ -100,6 +101,8 @@ namespace l.core
         public List<BizParam> Params { get; set; }
         public List<BizCheck> Checks { get; set; }
         protected ParamsHelper SmartParams;
+
+        private FieldMetaHelper fmHelper = null;
 
         public MetaBiz() {
             Checks = new List<BizCheck>();
@@ -239,7 +242,7 @@ namespace l.core
                     if(!c.CheckRepeated){
                         object errorMessageEx = null;
                         if (!c.Validate(pv, this, "biz \"" + BizID + "\"", out errorMessageEx))
-                            yield return new BizValidationResult(errorMessageEx == null ? c.CheckSummary :
+                            yield return new BizValidationResult(errorMessageEx == null ? CheckMsg(c) :
                                 Newtonsoft.Json.JsonConvert.SerializeObject(new { Summary = c.CheckSummary, Data = errorMessageEx }),
                                 new[] { c.ParamToValidate }, c.CheckType == CheckType.etWarning);
                     }else {
@@ -257,11 +260,21 @@ namespace l.core
                         foreach(var p in pl){
                             object errorMessageEx = null;
                             if (!c.Validate(p, this, "biz \"" + "\"", out errorMessageEx))
-                                yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate + "." + i.ToString(),  }, c.CheckType == CheckType.etWarning);
+                                yield return new BizValidationResult(CheckMsg( c), new[] { c.ParamToValidate + "." + i.ToString(),  }, c.CheckType == CheckType.etWarning);
                             i++;                            
                         };
                     }
                 }
+            }
+        }
+
+        private string CheckMsg(BizCheck ck) {
+            if ((ck.CheckSummary??"").Trim() != string.Empty) return ck.CheckSummary ;
+
+            else{
+                if (fmHelper == null) fmHelper = new FieldMetaHelper ();
+                fmHelper.Ready(new []{ck.ParamToValidate}, "");
+                return string.Format(System.Configuration.ConfigurationManager.AppSettings[ck.Type + "_Template"] ?? "未设置模板(" + ck.Type + "_Template)", fmHelper.Get( ck.ParamToValidate).DisplayLabel, ck.ParamToCompare);
             }
         }
 
