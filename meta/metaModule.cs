@@ -37,6 +37,8 @@ namespace l.core
             if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) if (!VersionHelper.Helper.CheckNewAs<Module>(this, "MetaModule", new[] { "ModuleID" }, true)) loaded = getOrm().Setup();
             if (!loaded) throw new Exception(string.Format("Module \"{0}\" does not exist.", ModuleID));
             //checkHashCode();
+
+            ModulePages.ForEach(p=> p.UI = l.core.SmartScript.Eval(p.UI??"", null));
             return this;
         }
 

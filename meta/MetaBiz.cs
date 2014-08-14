@@ -160,6 +160,7 @@ namespace l.core
                     r.Errors = Validate(null).ToList();
                     if (r.IsValid) {
                         foreach(var script in Scripts.OrderBy(p=>p.ProcIdx).Where(p=>p.ProcEnabled )){
+
                             var paramsName = (from Match m in new Regex(":([a-zA-z_][a-zA-z_\\d]+)").Matches(script.ProcSQL ?? "") where m.Value.Length > 1 select m.Value.Substring(1) )
                                 .Union(script.ProcRepeated && (script.ProcUpdateFlag !=null) ? new[] { script.ProcUpdateFlag } : new string[] { });
 
@@ -170,9 +171,12 @@ namespace l.core
                                     continue;
                                 int RowsAffected = 0;
                                 var paramValues = p;// SmartParams.GetDBParams(Params);
+
+                                var tsql = l.core.SmartScript.Eval(script.ProcSQL, Params.ToDictionary(p1 => p1.ParamName, q1 => paramValues.ContainsKey(q1.ParamName)?Convert.ToString(paramValues[q1.ParamName].ParamValue):null));
+
                                 if (script.InterActive){
                                     try {
-                                        var dt = DBHelper.ExecuteQuery(conn ?? connection, SmartParams.ParamNamePrefixHandle(Params, script.ProcSQL), paramValues);
+                                        var dt = DBHelper.ExecuteQuery(conn ?? connection, SmartParams.ParamNamePrefixHandle(Params, tsql), paramValues);
                                         foreach (System.Data.DataColumn dc in dt.Columns) 
                                             if (Params.Find(q => q.ParamName == dc.ColumnName) !=null) 
                                                 SmartParams.SetParamValue(dc.ColumnName, dt.Rows[0][dc]);
@@ -180,7 +184,7 @@ namespace l.core
                                     }
                                     catch (Exception e) { handleException(r, e, errorContext(script.ProcSummary, script.ProcSQL, paramValues), true); }
                                 }
-                                else try { RowsAffected = DBHelper.ExecuteSql(conn ?? connection, SmartParams.ParamNamePrefixHandle(Params, script.ProcSQL), paramValues); }
+                                else try { RowsAffected = DBHelper.ExecuteSql(conn ?? connection, SmartParams.ParamNamePrefixHandle(Params, tsql), paramValues); }
                                     catch (Exception e) { handleException(r, e, errorContext(script.ProcSummary, script.ProcSQL, paramValues), true); }
                                 if ((script.ExpectedRows > 0) && (script.ExpectedRows != RowsAffected))
                                     handleException(r, new Exception(string.Format("返回行数({0})不等于{1}，可能是其他用户已经修改过这条记录了.", RowsAffected, script.ExpectedRows)), errorContext(script.ProcSummary, script.ProcSQL, paramValues), true);

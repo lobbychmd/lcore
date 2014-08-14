@@ -44,10 +44,12 @@ namespace l.core
         }
 
         static public string Eval(string script, Dictionary<string, string> @params) {
-            string template = script.Replace("@", "^^^^").Replace("$", "@");
-            string result = Razor.Parse(template, new { Params = @params, Sys = getSysParams() });
-            result = result.Replace("^^^^", "@");
-            return result;
+            //try {
+                string template = script.Replace("@", "^^^^").Replace("$", "@");
+                string result = Razor.Parse(template, new { Params = @params, Sys = getSysParams() });
+                result = result.Replace("^^^^", "@");
+                return result;
+            //} catch { return script; }
         }
     }
 }

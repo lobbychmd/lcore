@@ -94,7 +94,7 @@ namespace l.core
                 }
             }
 
-            if ((table != null) && (!String.IsNullOrEmpty(Expression))) {
+            /*if ((table != null) && (!String.IsNullOrEmpty(Expression))) {
                 if (needBind(table)) {
                     var exp = new Expression(Expression);
                     for (int i = 0; i < table.Rows.Count - (ignoreLastRow ? 1 : 0); i++) {
@@ -102,7 +102,7 @@ namespace l.core
                             table.Rows[i][ss] = exp.Eval(KeyFields.ToDictionary(p=>p, q=> table.Rows[i][q]));
                     }
                 }
-            }
+            }*/
         }
 
         //暂时提供的功能
