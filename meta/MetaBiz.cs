@@ -115,7 +115,8 @@ namespace l.core
             if (e is BizException) ; //内层的异常，已经处理过了
             else
             {
-                if ( (e is System.Data.SqlClient.SqlException && ((System.Data.SqlClient.SqlException)(e)).Number >= 50000) 
+                if ( System.Configuration.ConfigurationManager.AppSettings["HideContextError"] == "true" 
+                  || (e is System.Data.SqlClient.SqlException && ((System.Data.SqlClient.SqlException)(e)).Number >= 50000) 
                   || (e is System.Data.Odbc.OdbcException     && ((System.Data.Odbc.OdbcException)(e)).ErrorCode >= 50000 ) ) {
                     r.Errors = new List<BizValidationResult> { new BizValidationResult(e.Message) };
                 }
