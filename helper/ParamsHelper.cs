@@ -36,12 +36,13 @@ namespace l.core
             if (_params == null) throw new Exception("无法确定调用类的参数信息."); 
         }
 
-        private IParam CheckParamExists(string paramName) {
+        public IParam CheckParamExists(string paramName, bool silent = false) {
             if (CheckParam) {
                 CheckParams();
                 var pp = (from i in _params where i.ParamName == paramName select i);
                 if (pp.Count() == 0)
-                    throw new Exception(string.Format("参数[{0}]没有定义.", paramName));
+                    if (silent) return null;
+                    else throw new Exception(string.Format("参数[{0}]没有定义.", paramName));
                 else return pp.First();
             }
             else return null;
@@ -133,11 +134,19 @@ namespace l.core
         //3) 字符串的 empty 和 null 处理
         //4) 模糊查询
         //5) 默认值
-        private System.Data.DbType GetDBType(ColumnType type) {
+        public System.Data.DbType GetDBType(ColumnType type)
+        {
             return type == ColumnType.ctDateTime ? System.Data.DbType.DateTime : (
                 type == ColumnType.ctNumber ? System.Data.DbType.Decimal : (
                 type == ColumnType.ctBool ? System.Data.DbType.Boolean : (
                 type == ColumnType.ctBinary ? System.Data.DbType.Binary : System.Data.DbType.String)));
+        }
+        public ColumnType GetParamType(System.Type type)
+        {
+            return type == typeof(DateTime) ? ColumnType.ctDateTime : (
+                type == typeof(int) || type == typeof(decimal) || type == typeof( Int16)|| type == typeof(double) ? ColumnType.ctNumber : (
+                type == typeof(bool) ? ColumnType.ctBool : (
+                type == typeof(byte) ? ColumnType.ctBinary : ColumnType.ctStr)));
         }
 
         private DBParam typeMatch(DBParam param, ColumnType type, object isnull) {

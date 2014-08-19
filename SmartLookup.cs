@@ -104,6 +104,25 @@ namespace l.core
                 }
             }*/
         }
+        
+        //一致性检查
+        public bool CheckLookup(DataTable table) {
+            if (!string.IsNullOrEmpty(LookupQuery)) { 
+                var q = new l.core.Query(LookupQuery).Load();
+                var fullParams = true;
+                foreach (string s in KeyFields) {
+                    var v = table.Rows[0][s];
+                    if (v == DBNull.Value || v == null || Convert.ToString(v) == string.Empty) fullParams = false;
+                    else q.SmartParams.SetParamValue(s, v);
+                }
+                if (fullParams) {
+                    var ds1 = q.ExecuteDataObject();
+                    return ds1.Tables[0].Rows.Count > 0;
+                }
+                else return true;
+            }
+            else return true;
+        }
 
         //暂时提供的功能
         static public List<SmartLookup> GetLookupFromFieldMeta(IEnumerable< FieldMeta > fms){
