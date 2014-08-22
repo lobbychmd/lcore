@@ -11,6 +11,7 @@ namespace l.core
         //private string searchField;
         public bool PickList { get; set; } // = true 代表SearchQuery 不会弹出，而是填充下拉框
 
+        public bool Check { get; set; }
         public bool Main { get; set; }
         public string Table { get; set; }
         public string[] KeyFields { get; set; }
@@ -110,10 +111,12 @@ namespace l.core
             if (!string.IsNullOrEmpty(LookupQuery)) { 
                 var q = new l.core.Query(LookupQuery).Load();
                 var fullParams = true;
-                foreach (string s in KeyFields) {
-                    var v = table.Rows[0][s];
-                    if (v == DBNull.Value || v == null || Convert.ToString(v) == string.Empty) fullParams = false;
-                    else q.SmartParams.SetParamValue(s, v);
+                foreach (string s in KeyFields.Union(new []{"Operator", "OperName", "LocalStoreNO"})) {
+                    if (q.Params.Find(p=>p.ParamName == s) != null){
+                        var v = table.Rows[0][s];
+                        if (v == DBNull.Value || v == null || Convert.ToString(v) == string.Empty) fullParams = false;
+                        else q.SmartParams.SetParamValue(s, v);
+                    }
                 }
                 if (fullParams) {
                     var ds1 = q.ExecuteDataObject();
