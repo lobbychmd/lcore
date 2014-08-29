@@ -17,6 +17,9 @@ namespace l.core
 
         private static Dictionary<string, string[]> getSysParams()
         {
+            if (l.core.Project.Current == null)
+                return null;
+
             var projectCode = l.core.Project.Current.ProjectCode;
             var f = SysParams.Find(p => p.ProjectCode == projectCode);
             if (f != null && f.Expired < DateTime.Now) {
