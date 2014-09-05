@@ -43,7 +43,7 @@ namespace l.core
         }
 
         private OrmHelper getOrm() {
-            return OrmHelper.From("metaQuery").F("QueryName", "QueryType", "HashCode", "Version", "ConnAlias").MF("SysValues", null).PK("QueryName").Obj(this).End
+            return OrmHelper.From("metaQuery").F("QueryName", "QueryType", "HashCode", "Version", "ConnAlias", "ChartSetting").MF("SysValues", null).PK("QueryName").Obj(this).End
                 .SubFrom("metaQueryScript").Obj(Scripts).End
                 .SubFrom("metaQueryChecks").F("CheckIdx","CheckType",  "CheckSummary", "ParamToValidate", "ParamToCompare", "CompareType", "Type", "CheckSQL", "CheckEnabled").
                     MF("Type", "ValidateType").Obj(Checks).End
@@ -109,9 +109,26 @@ namespace l.core
         }
     }
 
-    public class MetaQuery
+    public class ChartSetting {
+        public string x { get; set; }
+        public string y { get; set; }
+    }
+    public class ChartData
     {
+        public object[] xRange { get; set; }
+        public string xLabel { get; set; }
+        public string yLabel { get; set; }
+        public Dictionary<object, double> Data2D { get; set; }
+
+        public ChartData()
+        {
+            Data2D = new Dictionary<object, double>();
+        }
+    }
+
+    public class MetaQuery {
         private Dictionary<string, object> sysValues { get; set; }
+        private ChartSetting chartSetting ;
         [Required]
         public string QueryName { get; set; }
         [Required]
@@ -119,9 +136,28 @@ namespace l.core
         public string ConnAlias { get; set; }
         public string Version { get; set; }
         public List<QueryScript> Scripts { get; set; }
+        public string ChartSetting {get;set;}
+        
         //public List<QueryScriptMeta> ScriptsMeta { get; set; }
         public List<QueryParam> Params { get; set; }
         public List<QueryCheck> Checks { get; set; }
+
+        public ChartSetting QueryChartSetting { get {
+                if (chartSetting == null) {
+                    if (ChartSetting != null && !string.IsNullOrEmpty(ChartSetting.Trim()))
+                    {
+                        try{
+                            if (!string.IsNullOrEmpty(ChartSetting.Trim())) chartSetting = Newtonsoft.Json.JsonConvert.DeserializeObject<ChartSetting>(ChartSetting);
+                            else chartSetting = new ChartSetting();
+                        }
+                        catch (Exception e) { chartSetting = null; throw new Exception(string.Format("查询 \"{0}\" 获取图表设置格式出错.\n", QueryName) + e.Message); }
+
+                    }else chartSetting =  new ChartSetting();
+                }
+                return chartSetting;
+            }
+        }
+
         public Dictionary<string, object> SysValues { get { return sysValues; } set { 
             sysValues = value ;
             foreach (var i in Params) { 
@@ -340,6 +376,19 @@ namespace l.core
                 object errorMessageEx = null;
                 if (!c.Validate(pv, this, "query \"" + QueryName + "\"", out errorMessageEx)) yield return new BizValidationResult(c.CheckSummary, new[] { c.ParamToValidate }, c.CheckType == CheckType.etWarning);
             }
+        }
+
+        public ChartData GetChartData(DataTable table) {
+            var q  = this;
+            var chartSetting = q.QueryChartSetting;
+            var chartData = new ChartData();
+            chartData.xRange = (from System.Data.DataRow dr in table.Rows select dr[chartSetting.x].ToString()).ToArray();
+            chartData.Data2D = (from System.Data.DataRow dr in table.Rows
+                                group dr by dr[chartSetting.x] into grouped
+                                select new { x = grouped.Key, y = grouped.Sum(p => Convert.ToDouble(p[chartSetting.y])) }).ToDictionary(p => p.x, q1 => q1.y);
+            chartData.xLabel = table.Columns[chartSetting.x].Caption;
+            chartData.yLabel = table.Columns[chartSetting.y].Caption;
+            return chartData;
         }
 
         //下面3个方法为了NoSQL 和SQL 的统一接口
