@@ -109,21 +109,49 @@ namespace l.core
         }
     }
 
+    public class YReference {
+        public string label { get; set; }
+        public string value { get; set; }
+    }
+
+
+    public class ChartSettingY {
+        public string field { get; set; }
+        public string chartType { get; set; }
+        public YReference[] reference { get; set; }
+    }
+
     public class ChartSetting {
         public string x { get; set; }
-        public string y { get; set; }
+        
+        public ChartSettingY[] y { get; set; }
+        public string xType { get; set; }
+        public string caption { get; set; }
     }
+
+    public class ChartDataY {
+        public string yLabel { get; set; }
+        public Dictionary<object, double> Data2D { get; set; }
+        public string ChartType { get; set; }
+        public YReference[] reference { get; set; }
+        public ChartDataY() {
+            Data2D = new Dictionary<object, double>();
+        }
+    }
+
     public class ChartData
     {
         public object[] xRange { get; set; }
         public string xLabel { get; set; }
-        public string yLabel { get; set; }
-        public Dictionary<object, double> Data2D { get; set; }
+        public string xType { get; set; }
+        public List<ChartDataY> YData { get; set; }        
 
         public ChartData()
         {
-            Data2D = new Dictionary<object, double>();
+            
         }
+        
+        public string Caption { get; set; }
     }
 
     public class MetaQuery {
@@ -381,13 +409,24 @@ namespace l.core
         public ChartData GetChartData(DataTable table) {
             var q  = this;
             var chartSetting = q.QueryChartSetting;
-            var chartData = new ChartData();
-            chartData.xRange = (from System.Data.DataRow dr in table.Rows select dr[chartSetting.x].ToString()).ToArray();
-            chartData.Data2D = (from System.Data.DataRow dr in table.Rows
-                                group dr by dr[chartSetting.x] into grouped
-                                select new { x = grouped.Key, y = grouped.Sum(p => Convert.ToDouble(p[chartSetting.y])) }).ToDictionary(p => p.x, q1 => q1.y);
-            chartData.xLabel = table.Columns[chartSetting.x].Caption;
-            chartData.yLabel = table.Columns[chartSetting.y].Caption;
+            var chartData = new ChartData() { YData =  new List<ChartDataY>(), Caption = chartSetting.caption,  xType = chartSetting.xType};
+            chartData.xRange = string.IsNullOrEmpty(chartSetting.x)?new []{""}:
+                (from System.Data.DataRow dr in table.Rows select dr[chartSetting.x].ToString()).ToArray();
+            foreach(var i in chartSetting.y){
+                var chartDatay = new ChartDataY();
+                chartDatay.reference = i.reference;
+                chartDatay.Data2D = string.IsNullOrEmpty(chartSetting.x)?
+                    new Dictionary<object, Double> {{"", (from System.Data.DataRow dr in table.Rows select dr).Sum(p=>Convert.ToDouble(p[i.field]))}}
+                    :
+                        (from System.Data.DataRow dr in table.Rows
+                            group dr by dr[chartSetting.x] into grouped
+                            select new { x = grouped.Key, y = grouped.Sum(p => Convert.ToDouble(p[i.field])) }).ToDictionary(p => p.x, q1 => q1.y);
+                chartDatay.yLabel = table.Columns[i.field].Caption;
+                chartDatay.ChartType = i.chartType;
+
+                chartData.YData.Add(chartDatay);
+            }
+            
             return chartData;
         }
 
