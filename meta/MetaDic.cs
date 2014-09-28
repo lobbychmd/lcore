@@ -34,7 +34,7 @@ namespace l.core
             //checkHashCode();
             return this;
         }
-
+        public void Remove() { getOrm().Dels(); }
         public void Save()
         {
             //int i = 0;

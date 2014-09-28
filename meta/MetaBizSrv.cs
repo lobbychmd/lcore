@@ -21,7 +21,7 @@ namespace l.core
         private OrmHelper getOrm() {
             return OrmHelper.From("metaBizSrv").PK("SrvCode").Obj(this).End;
         }
-
+        public void Remove() { getOrm().Dels(); }
         public BizSrv Load()  {
             var loaded = getOrm().Setup();
             if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) 

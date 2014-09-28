@@ -142,7 +142,7 @@ namespace l.core
             return getOrm(this).UpdateSQL();
         }
 
-
+        public void Remove() { getOrm(this).Dels(); }
         public void Save(){
             FieldMeta.getOrm(this).Save();
         }

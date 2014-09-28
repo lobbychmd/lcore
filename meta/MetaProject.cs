@@ -30,8 +30,8 @@ namespace l.core
         private void children(MenuItem mi, DataTable dtModule, DataTable dtModulePower , DataTable dtMenu, List<MetaModule> modules) {
             var v = new DataView(dtMenu, "ParentID='" + (mi.ModuleID ?? "") + "'", "ModuleID", DataViewRowState.CurrentRows);
             v.Sort = "Idx";
-            foreach (System.Data.DataRowView dr in v)
-            {
+            foreach (System.Data.DataRowView dr in v) {
+                
                 var mid =dr.Row["ModuleID"].ToString();
                 var m = dtModule.DefaultView.Find(mid);
                 if (m >=0) {
@@ -79,7 +79,7 @@ namespace l.core
         public string CloudUrl(string url) {  //用模拟器号 是否为空 代表是否云
             return SimulateCode == null ? url : "/" + SimulateCode.ToString() + url;
         }
-
+        public void Remove() { getOrm().Dels(); }
         public Project Load()  {
             var loaded = getOrm().Setup();
             if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) if (!VersionHelper.Helper.CheckNewAs<Project>(this, "MetaProject", new string[] { }, true)) loaded = getOrm().Setup();
@@ -225,7 +225,7 @@ namespace l.core
         public string UpdateSQL() {
             return getOrm().UpdateSQL();
         }
-
+        public void Remove() { getOrm().Dels(); }
         public void Save(){
             getOrm().Save();
         }
@@ -240,11 +240,35 @@ namespace l.core
         public string Version { get; set; }
     }
 
+    public class Subsystem : MetaSubsystem  {
+        private OrmHelper getOrm() {
+            return OrmHelper.From("metaSubsystem").F("SystemCode", "SystemName").PK("SystemCode").Obj(this).End; 
+        }
+        
+        public Subsystem(string systemCode) {
+            this.SystemCode = systemCode;
+        }
+
+        public Subsystem Load() {
+            var loaded = getOrm().Setup();
+            if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) if (!VersionHelper.Helper.CheckNewAs<Connection>(this, "MetaSubsystem", new[] { "SystemCode" }, true)) loaded = getOrm().Setup();
+            if (!loaded) throw new Exception(string.Format("Subsystem \"{0}\" does not exist.", SystemCode)); 
+            return this;
+        }
+
+        public string UpdateSQL() {
+            return getOrm().UpdateSQL();
+        }
+        public void Remove() { getOrm().Dels(); }
+        public void Save(){
+            getOrm().Save();
+        }
+    }
+
     //就是组织结构类型表
     public class MetaSubsystem {
-        public string Code { get; set; }
-        public string Name { get; set; }
-        public Dictionary<string, int> ConnAlias { get; set; }
+        public string SystemCode { get; set; }
+        public string SystemName { get; set; }
         
         public MetaSubsystem (){
         }
@@ -269,7 +293,7 @@ namespace l.core
         public string UpdateSQL() {
             return getOrm().UpdateSQL();
         }
-
+        public void Remove() { getOrm().Dels(); }
         public void Save(){
             getOrm().Save();
         }

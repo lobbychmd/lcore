@@ -33,7 +33,7 @@ namespace l.core{
                 getOrm().Setup();
             return this;
         }
-
+        public void Remove() { getOrm().Dels(); }
         public void Save() {  
             getOrm().Save();  
         }

@@ -30,7 +30,7 @@ namespace l.core
             if (!loaded) throw new Exception(string.Format("QuerySrv \"{0}\" does not exist.", SrvCode));
             return this;
         }
-
+        public void Remove() { getOrm().Dels(); }
         public void Save()  { getOrm().Save(); }
 
         public DataSet Execute(string id, Dictionary<string, object> _params, int limit) {

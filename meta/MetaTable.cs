@@ -47,7 +47,7 @@ namespace l.core
             //checkHashCode();
             return this;
         }
-
+        public void Remove() { getOrm().Dels(); }
         public void Save( ) {
             //SaveAndSync(null);
             getOrm().Save( );

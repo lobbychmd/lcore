@@ -26,7 +26,7 @@ namespace l.core
             if (VersionHelper.Helper != null && VersionHelper.Helper.Action.IndexOf("update") >= 0) if (!VersionHelper.Helper.CheckNewAs<ExternalSrv>(this, "MetaExternalSrv", new[] { "SrvCode" }, true)) getOrm().Setup();
             return this;
         }
-
+        public void Remove() { getOrm().Dels(); }
         public void Save() { getOrm().Save(); }
     }
  

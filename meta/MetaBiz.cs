@@ -52,6 +52,8 @@ namespace l.core
             return this;
         }
 
+        public void Remove() { getOrm().Dels(); }
+
         public void Save()
         {
             getOrm().Save();

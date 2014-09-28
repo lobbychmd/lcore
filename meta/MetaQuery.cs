@@ -65,7 +65,7 @@ namespace l.core
                     Params.Add(new QueryParam { ParamName = "ParamGroup" });
             return this;
         }
-
+        public void Remove() { getOrm().Dels(); }
         public string UpdateSQL()
         {
             return getOrm().UpdateSQL();

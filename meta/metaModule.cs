@@ -27,7 +27,7 @@ namespace l.core
         }
 
         private OrmHelper getOrm() {
-            return OrmHelper.From("metaModule").F("ModuleID", "Caption", "ParentID", "Path","Idx", "HashCode", "Version").MF("Caption", "ModuleName").PK("ModuleID").Obj(this).End
+            return OrmHelper.From("metaModule").F("ModuleID", "Caption", "ParentID", "Path","Idx", "Subsystems", "HashCode", "Version").MF("Caption", "ModuleName").PK("ModuleID").Obj(this).End
                 .SubFrom("metaModuleFunc").Obj(Functions).End
                 .SubFrom("metaModulePage").F("PageParams", "PageID", "PageType","PageLookup", "Params", "UI", "PageFlow", "Queries").Obj(ModulePages).End;
         }
@@ -45,7 +45,7 @@ namespace l.core
         public string UpdateSQL() {
             return getOrm().UpdateSQL();
         }
-
+        public void Remove() { getOrm().Dels(); }
         public void Save() {
             getOrm().Save();
         }
@@ -74,7 +74,7 @@ namespace l.core
             //checkHashCode();
             return this;
         }
-
+        public void Remove() { getOrm().Dels(); }
         public void Save()
         {
             getOrm().Save();
@@ -93,6 +93,7 @@ namespace l.core
         public string ParentID { get; set; }
         public string Path { get; set; }
         public Nullable<int> Idx { get; set; }
+        public string Subsystems { get; set; }
         public string Version { get; set; }
         public List<ModuleFunc> Functions { get; set; }
         public List<ModulePage> ModulePages { get; set; }

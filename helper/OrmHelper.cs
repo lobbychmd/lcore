@@ -131,6 +131,14 @@ namespace l.core
             return sqls;
         }
 
+        private List<sqlItem > delSQL( ) {
+            var sqls = new List<sqlItem > ();
+            config.ForEach(c => {
+                sqls.Add(new sqlItem{ script =  SQLHelper.From(c.TableName).PK(c.PKey).Delete(),  @params = obj2DbParams(c, config[0].PKey, config[0].Object)});
+            });
+            return sqls;
+        }
+
         public void Save(  ) {
             Saves(null);
         }
@@ -157,6 +165,20 @@ namespace l.core
             }
         }
 
+        public void Dels(  ) {
+            using (var conn = Project.Current != null && cloud? (frm?Project.Current.GetFrmConn(): Project.Current.GetConn()): DBHelper.GetConnection(frm?0:1))   {
+                var trans = DBHelper.GetTranscation(conn);
+                try {
+                    foreach (var i in delSQL())  DBHelper.ExecuteSql(conn, i.script, i.@params);
+                    DBHelper.CommitTranscation(trans);
+                }
+                catch {
+                    DBHelper.RollbackTranscation(trans);
+                    throw ;
+                }
+            }
+        }
+
         public string UpdateSQL()
         {
             List<MetaColumn> fieldsMeta = new List<MetaColumn>();
@@ -172,6 +194,7 @@ namespace l.core
                 }
             return string.Join("\n", from i in sqls select  i.script);
         }
+
 
         private DataTable select(OrmConfig c, object obj)
         {
