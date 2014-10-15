@@ -18,8 +18,10 @@ namespace l.core
         }
 
         private OrmHelper getOrm()  {
-            return OrmHelper.From("metaExternalSrv").F("SrvCode", "Name",   "SrvType", "SrvParams", "URI", "Version", "HashCode").PK("SrvCode").Obj(this).End;
-        }
+            return OrmHelper.From("metaExternalSrv").F("SrvCode", "Name",   "SrvType", "SrvParams", "URI", "Version", "HashCode")
+                .MF("srvParams", null)
+                 .PK("SrvCode").Obj(this).End;
+        } 
  
         public ExternalSrv Load()  {
             getOrm().Setup();
@@ -36,6 +38,16 @@ namespace l.core
         public string SrvCode { get; set; }
         public string SrvType { get; set; }
         public string URI { get; set; }
+
+        private string _ps = null;
+        private Dictionary<string, object> srvps = null;
+        public Dictionary<string, object> srvParams { get {
+            if (_ps != SrvParams) {
+                _ps = SrvParams;
+                srvps =  Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(_ps);
+            }
+            return srvps;
+        } }
     }
 
 }

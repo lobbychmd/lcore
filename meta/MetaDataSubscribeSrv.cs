@@ -66,6 +66,17 @@ namespace l.core{
         public string DestSrvParams { get; set; }
         //public RepDestinationResult LastInvoke { get; set; }
 
+        private string _ps = null;
+        private Dictionary<string, object> srvps = null;
+        public Dictionary<string, object> SubscribeSrvItemParams{
+            get
+            {
+            if (_ps != DestSrvParams) {
+                _ps = DestSrvParams;
+                srvps =  Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(_ps);
+            }
+            return srvps;
+        } }
     }
 }
 
