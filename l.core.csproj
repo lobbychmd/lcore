@@ -76,6 +76,7 @@
     <Compile Include="meta\MetaDataSubscribeSrv.cs" />
     <Compile Include="meta\MetaExternalSrv.cs" />
     <Compile Include="meta\MetaQuerySrv.cs" />
+    <Compile Include="meta\MetaFlow.cs" />
     <Compile Include="meta\SysTableMeta.cs" />
     <Compile Include="pinyin.cs" />
     <Compile Include="SmartLookup.cs" />

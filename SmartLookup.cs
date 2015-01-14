@@ -31,7 +31,20 @@ namespace l.core
         //2) 处理 PickList
         //  a) 数据字典的 SQL ，或者 StoreNO 等类型
         //  b) 通用单据也有不弹出，而是构造下拉的应用
+        private string match(string field){
+            return FieldsMatch == null? field: (FieldsMatch.ContainsKey(field)? FieldsMatch[field]: field);
+        }
+        private string reMatch(string field)
+        {
+            if (FieldsMatch != null)  {
+                var fs = from i in FieldsMatch where i.Value == field select i.Key;
+                if (fs.Count() > 0) return fs.First(); else return field;
+            }
+            else return field;
+        }
+
         public SmartLookup Ready(DataTable table, IEnumerable< FieldMeta> fms) {
+
             if ((SearchQuery != null) && (KeyFields.Count() == 1) && (KeyFields[0].IndexOf("TypeID") > 0)) {
                 PickList = true; //应用在 共通资料上的StdQuery 作为填充应用
             } 
@@ -54,9 +67,10 @@ namespace l.core
                 using (var conn = Project.Current== null?  DBHelper.GetConnection(1):l.core.Project.Current.GetConn()) {
                     var q = new l.core.Query(LookupQuery).Load();
                     DataSet ds = q.Prepare(conn, false);
-                    foreach (string s in LookupFields) { 
+                    foreach (string s in LookupFields) {
+                        var ss = match(s);
                         if (!table.Columns.Contains(s))
-                            table.Columns.Add(s, ds.Tables[0].FindColumn(s).DataType).ExtendedProperties["lookup"] = "true";
+                            table.Columns.Add(s, ds.Tables[0].FindColumn(ss).DataType).ExtendedProperties["lookup"] = "true";
                     }
                 }
             }
@@ -72,7 +86,7 @@ namespace l.core
         }
 
         private bool needBind(DataTable table) {
-            return ((from string s in LookupFields where  table.Columns[s].ExtendedProperties.ContainsKey("lookup") select 1).Count() > 0);
+            return ((from string s in LookupFields where table.Columns[s].ExtendedProperties.ContainsKey("lookup") select 1).Count() > 0);
         }
         //就是立即关联
         public void BindData(DataTable table, Dictionary<string, object> sysParamValues, bool ignoreLastRow = true) {
@@ -82,13 +96,15 @@ namespace l.core
                         var q = new l.core.Query(LookupQuery).Load();
                         for (int i = 0; i < table.Rows.Count - (ignoreLastRow ? 1 : 0); i++) {
                             foreach (string s in KeyFields)
-                                foreach (var par in q.Params)
-                                    q.SmartParams.SetParamValue(par.ParamName, sysParamValues != null && sysParamValues.ContainsKey(par.ParamName) ? sysParamValues[par.ParamName] : (table.Columns.Contains(par.ParamName) ? table.Rows[i][par.ParamName] : (table.DataSet.Tables.Count > 1 && table.DataSet.Tables[0].Columns.Contains(par.ParamName) ? table.DataSet.Tables[0].Rows[0][par.ParamName] : null)));
+                                foreach (var par in q.Params){
+                                    var localField = reMatch(par.ParamName);
+                                    q.SmartParams.SetParamValue(par.ParamName, sysParamValues != null && sysParamValues.ContainsKey(par.ParamName) ? sysParamValues[par.ParamName] : (table.Columns.Contains(localField) ? table.Rows[i][localField] : (table.DataSet.Tables.Count > 1 && table.DataSet.Tables[0].Columns.Contains(localField) ? table.DataSet.Tables[0].Rows[0][localField] : null)));
+                                }
                             //q.SmartParams.SetParamValue(s, table.Rows[i][s]);
                             DataSet ds = q.ExecuteDataObject(conn, false);
                             if (ds.Tables[0].Rows.Count > 0)
                                 foreach (string ss in LookupFields)  {
-                                    if (table.Columns[ss].ExtendedProperties.ContainsKey("lookup")) table.Rows[i][ss] = ds.Tables[0].Rows[0][ss];
+                                    if (table.Columns[ss].ExtendedProperties.ContainsKey("lookup")) table.Rows[i][ss] = ds.Tables[0].Rows[0][match( ss)];
                                 }
                         }
                     }

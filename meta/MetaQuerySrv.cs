@@ -12,8 +12,7 @@ namespace l.core
         public string HashCode { get; set; }
         public string Version { get; set; }
 
-        private void checkHashCode()
-        {
+        private void checkHashCode() {
             if (!string.IsNullOrEmpty(HashCode))
                 System.Diagnostics.Debug.Assert(
                     l.core.ScriptHelper.GetHashCode(this) == HashCode, "校验码错误.");
@@ -33,12 +32,12 @@ namespace l.core
         public void Remove() { getOrm().Dels(); }
         public void Save()  { getOrm().Save(); }
 
-        public DataSet Execute(string id, Dictionary<string, object> _params, int limit) {
+        public DataSet Execute(string id, Dictionary<string, object> _params, int limit, int start =0) {
             var q = new l.core.Query(QueryName).Load();
             foreach (var i in _params)
-                q.SmartParams.SetParamValue(i.Key, i.Value);
-            if ( (IdField ??"").Trim() != "") q.SmartParams.SetParamValue(IdField, id);
-            return q.ExecuteQuery(null, 0, limit);
+                if (q.Params.Find(p=>p.ParamName == i.Key) !=null ) q.SmartParams.SetParamValue(i.Key, i.Value);
+            if ( (IdField ??"").Trim() != "" && id != null) q.SmartParams.SetParamValue(IdField, id);
+            return q.ExecuteQuery(null, start, limit);
         }
     }
 

@@ -217,6 +217,7 @@ namespace l.core
     public class PageFlowAction {
         public string Summary { get; set; }
         public string Biz { get; set; }
+        public string FlowAction { get; set; }
         public string Description { get; set; }
     }
 

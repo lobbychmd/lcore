@@ -105,7 +105,7 @@ namespace l.core
         public CheckException(string message)
             : base(message)
         { 
-        
+            
         }
     }
 
@@ -119,14 +119,19 @@ namespace l.core
         public string field { get; set; }
         public string chartType { get; set; }
         public YReference[] reference { get; set; }
+        public bool Percent { get; set; }
     }
 
     public class ChartSetting {
         public string x { get; set; }
-        
+        public string yGroup { get; set; }
+        public string yGroupDisplay { get; set; }
         public ChartSettingY[] y { get; set; }
         public string xType { get; set; }
         public string caption { get; set; }
+
+        public bool serverSum { get; set; }
+
     }
 
     public class ChartDataY {
@@ -134,6 +139,7 @@ namespace l.core
         public Dictionary<object, double> Data2D { get; set; }
         public string ChartType { get; set; }
         public YReference[] reference { get; set; }
+        public bool Percent { get; set; }
         public ChartDataY() {
             Data2D = new Dictionary<object, double>();
         }
@@ -148,7 +154,7 @@ namespace l.core
 
         public ChartData()
         {
-            
+            YData = new List<ChartDataY>();
         }
         
         public string Caption { get; set; }
@@ -406,27 +412,92 @@ namespace l.core
             }
         }
 
-        public ChartData GetChartData(DataTable table) {
+        public ChartData GetChartData(DataTable table)
+        {
+            try {
+                return _getChartData(table);
+            }
+            catch (Exception e) {
+                throw new Exception(e.Message + "\n" + e.StackTrace);
+            }
+        }
+        public ChartData _getChartData(DataTable table) {
             var q  = this;
             var chartSetting = q.QueryChartSetting;
             var chartData = new ChartData() { YData =  new List<ChartDataY>(), Caption = chartSetting.caption,  xType = chartSetting.xType};
             chartData.xRange = string.IsNullOrEmpty(chartSetting.x)?new []{""}:
                 (from System.Data.DataRow dr in table.Rows select dr[chartSetting.x].ToString()).ToArray();
-            foreach(var i in chartSetting.y){
-                var chartDatay = new ChartDataY();
-                chartDatay.reference = i.reference;
-                chartDatay.Data2D = string.IsNullOrEmpty(chartSetting.x)?
-                    new Dictionary<object, Double> {{"", (from System.Data.DataRow dr in table.Rows select dr).Sum(p=>Convert.ToDouble(p[i.field]))}}
-                    :
-                        (from System.Data.DataRow dr in table.Rows
-                            group dr by dr[chartSetting.x] into grouped
-                            select new { x = grouped.Key, y = grouped.Sum(p => Convert.ToDouble(p[i.field])) }).ToDictionary(p => p.x, q1 => q1.y);
-                chartDatay.yLabel = table.Columns[i.field].Caption;
-                chartDatay.ChartType = i.chartType;
+            if (chartSetting.serverSum){
+                var groups = string.IsNullOrEmpty(chartSetting.yGroup) ? new[] { "" } : 
+                    (from System.Data.DataRow dr in table.Rows select dr[chartSetting.yGroup].ToString()).Distinct();
 
-                chartData.YData.Add(chartDatay);
+                foreach(var g in groups){
+                    foreach(var i in chartSetting.y){
+                        var chartDatay = new ChartDataY();
+                        chartDatay.reference = i.reference;
+                        chartDatay.Data2D = string.IsNullOrEmpty(chartSetting.x)?
+                            new Dictionary<object, Double> {{"", 
+                                (from System.Data.DataRow dr in table.Rows 
+                                    where (string.IsNullOrEmpty (g) || dr[chartSetting.yGroup].ToString() == g)                                select dr).Sum(p=>Convert.ToDouble(p[i.field]))}}
+                            :
+                                (from System.Data.DataRow dr in table.Rows
+                                    where (string.IsNullOrEmpty (g) || dr[chartSetting.yGroup].ToString() == g)
+                                    group dr by dr[chartSetting.x] into grouped
+                                    select new { x = grouped.Key, y = grouped.Sum(p => Convert.ToDouble(p[i.field])) }).ToDictionary(p => p.x, q1 => q1.y);
+                        chartDatay.yLabel = table.Columns[i.field].Caption + (string.IsNullOrEmpty(g)?"":"(" + g + ")");
+                        chartDatay.ChartType = i.chartType;
+
+                        chartData.YData.Add(chartDatay);
+                    }
+                }
             }
-            
+            else {
+                var ygroups = string.IsNullOrEmpty(chartSetting.yGroup) ? null : chartSetting.yGroup.Split(';');
+                
+                foreach(var i in chartSetting.y){
+                    if (ygroups == null){
+                         
+                        chartData.YData = chartData.YData.Union(
+                                new List<ChartDataY> {
+                                new ChartDataY
+                                     {
+                                         ChartType = i.chartType,
+                                         reference = i.reference,
+                                         Percent = i.Percent,
+                                         yLabel = table.Columns[i.field].Caption,
+                                         Data2D =(from System.Data.DataRow dr in table.Rows
+                                           select dr).ToDictionary(p => chartSetting.x == null? "default":p[chartSetting.x], q1 => Convert.ToDouble( q1[i.field]))
+                                     }
+                            }
+                        ).ToList();
+                    }
+                    else {
+                        chartData.YData = chartData.YData.Union(
+                            (from System.Data.DataRow dr in table.Rows
+                                               group dr by string.Format(chartSetting.yGroupDisplay, ygroups.Select(p => dr[p].ToString()).Union(new[] { table.Columns[i.field].Caption }).ToArray()) into grouped
+                                               select grouped.Key).Select(
+                                yg =>
+                                     new ChartDataY
+                                     {
+                                         ChartType = i.chartType,
+                                         yLabel = yg,
+                                         Percent = i.Percent,
+                                         reference = i.reference,
+                                         Data2D = (from System.Data.DataRow dr in table.Rows
+                                                   where string.Format(chartSetting.yGroupDisplay, ygroups.Select(p => dr[p].ToString()).Union(new[] { table.Columns[i.field].Caption }).ToArray()) == yg
+                                                   group dr by dr[chartSetting.x] into grouped
+
+                                                   select new { x = grouped.Key, y = grouped.Sum(p => Convert.ToDouble(p[i.field])) })
+                                                .ToDictionary(p => p.x, q1 => q1.y)
+                                     }
+
+                            )
+                        ).ToList();
+                    }
+                }
+               
+
+            }
             return chartData;
         }
 

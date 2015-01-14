@@ -7,8 +7,7 @@ using l.core;
 
 namespace l.core
 {
-    public class BizSrv : MetaBizSrv
-    {
+    public class BizSrv : MetaBizSrv {
         public string HashCode { get; set; }
         public string Version { get; set; }
 

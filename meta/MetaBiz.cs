@@ -231,6 +231,7 @@ namespace l.core
         public IEnumerable<BizValidationResult> InternalValidate(ValidationContext validationContext, bool checkConfirm, bool checkNotConfirm) {
             var pv = SmartParams.GetDBParams(Params);
             foreach (var c in Checks.OrderBy(p=>p.CheckIdx).Where(p => p.CheckEnabled ) ) {
+                
                 if( !checkConfirm && c.CheckType == CheckType.etConfirm) continue;
                 if( !checkNotConfirm && c.CheckType != CheckType.etConfirm ) continue;
 
@@ -247,6 +248,7 @@ namespace l.core
 
                 
                     if(!c.CheckRepeated){
+                        
                         object errorMessageEx = null;
                         if (!c.Validate(pv, this, "biz \"" + BizID + "\"", out errorMessageEx))
                             yield return new BizValidationResult(errorMessageEx == null ? CheckMsg(c) :
@@ -265,10 +267,13 @@ namespace l.core
                             throw new Exception( string.Format("Biz \"{0}\" 业务检查 \"{1}\"执行中, ", BizID, c.CheckSummary) + e.Message);
                         }
                         foreach(var p in pl){
-                            object errorMessageEx = null;
-                            if (!c.Validate(p, this, "biz \"" + "\"", out errorMessageEx))
-                                yield return new BizValidationResult(CheckMsg( c), new[] { c.ParamToValidate + "." + i.ToString(),  }, c.CheckType == CheckType.etWarning);
-                            i++;                            
+                            if (!string.IsNullOrEmpty(c.CheckExecuteFlag) && (("*" + c.CheckExecuteFlag)).IndexOf(p[c.CheckUpdateFlag ?? "UpdateFlag"].ParamValue.ToString()) < 1)
+                            { }
+                            else {
+                                object errorMessageEx = null;
+                                if (!c.Validate(p, this, "biz \"" + "\"", out errorMessageEx))
+                                    yield return new BizValidationResult(CheckMsg(c), new[] { c.ParamToValidate + "." + i.ToString(), }, c.CheckType == CheckType.etWarning);
+                            } i++;                            
                         };
                     }
                 }
