@@ -63,7 +63,7 @@ namespace l.core
             if (true){
                 foreach (Match m in new Regex("@([_a-zA-Z][_a-zA-Z0-9]*)").Matches(cmd.CommandText))
                     if((from System.Data.Common.DbParameter p in cmd.Parameters where p.ParameterName == m.Value.Substring(1) select p).Count() == 0) 
-                        SetSqlCmdParam(cmd, dbParams, m.Value.Substring(1));
+                        SetSqlCmdParam(cmd, dbParams, m.Value.Substring(cmd is FbCommand ?0: 1));
             }
             else foreach (var i in dbParams) {
                 SetSqlCmdParam(cmd, dbParams, i.Key);
@@ -106,13 +106,14 @@ namespace l.core
         }
 
         static private void Log (string title, IDbConnection connection, string sql, Dictionary<string, DBParam> dbParams, int rowCount){
+            if (!(connection is FbConnection))
             l.core.LogHelper.Log(title + ": " + sql.Summary(), new { DB = connection.Database, SQL = sql, Params = dbParams == null ? null : dbParams.ToList(), RowsCount = rowCount }, who: "system"); 
         }
 
         private static DbCommand createCmd (IDbConnection conn, string sql){
             DbCommand cmd =  conn is SqlConnection? new SqlCommand(sql, conn as SqlConnection):(
                 conn is FbConnection? new FbCommand(sql, conn as FbConnection) as DbCommand: (conn is OdbcConnection? new OdbcCommand(sql, conn as OdbcConnection): null));
-            cmd.CommandTimeout = conn.ConnectionTimeout;
+              cmd.CommandTimeout = conn.ConnectionTimeout;
             return cmd;
         }
 

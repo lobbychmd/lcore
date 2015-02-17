@@ -58,7 +58,7 @@ namespace l.core
             if (!loaded) throw new Exception(string.Format("Query \"{0}\" does not exist.", QueryName));
             else if (Scripts.Count == 0) throw new Exception(string.Format("Query \"{0}\" does not include any statements.", QueryName));
             //checkHashCode();
-            SmartParams.SetParams(Params);
+            base.Init();
 
             if (Params.Find(p => !string.IsNullOrEmpty(p.ParamGroups)) != null)
                 if (Params.Find(p => p.ParamName == "ParamGroup") == null) 
@@ -210,6 +210,11 @@ namespace l.core
             Checks= new List<QueryCheck>();
             SmartParams = new ParamsHelper() ;
         }
+        public void Init() {
+            if (SmartParams == null) SmartParams = new ParamsHelper();
+            SmartParams.SetParams(Params);
+        }
+
         public string ParamNamePrefixHandle(string sql)
         {
             return SmartParams.ParamNamePrefixHandle(Params, sql);

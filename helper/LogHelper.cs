@@ -36,7 +36,24 @@ namespace l.core
 
         public void LogSh(string what, object data, LogLevel level = LogLevel.llInfo, string who = null, string where = null)
         {
-            var db =  MongoDBHelper.GetMongoDB(false);
+            /*using (var conn = l.core.DBHelper.GetConnection("FirebirdDB"))
+            {
+                l.core.DBHelper.ExecuteSql(conn, @"
+                    insert into Logs( id, nLevel, sWhen, sWhat, sWho, sWhere, sData)
+                              values(@id, @Level, @When, null, null, null, null)
+                ", new Dictionary<string, DBParam> { 
+                    {"@id", new DBParam{ParamValue = MongoDB.Bson.ObjectId.GenerateNewId().ToString(), DbType = System.Data.DbType.String}},
+                    {"@Level", new DBParam{ParamValue =  level, DbType = System.Data.DbType.Int32}},
+                    {"@When", new DBParam{ParamValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), DbType = System.Data.DbType.String}},
+                   // {"@What", new DBParam{ParamValue = what, DbType = System.Data.DbType.String}},
+                   // {"@Who", new DBParam{ParamValue = who, DbType = System.Data.DbType.String}},
+                   // {"@Where", new DBParam{ParamValue = where, DbType = System.Data.DbType.String}},
+                    //{"@Data", new DBParam{ParamValue = JsonConvert.SerializeObject(data, Formatting.Indented, new JsonSerializerSettings { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }), DbType = System.Data.DbType.String}},
+                 });
+            }*/
+
+
+             var db =  MongoDBHelper.GetMongoDB(false);
             if (db == null) return;
 
             var c = db.GetCollection<LogItem>("Logs");
@@ -47,7 +64,7 @@ namespace l.core
                 Who = who,
                 Where = where,
                 Data = JsonConvert.SerializeObject(data, Formatting.Indented, new JsonSerializerSettings { ReferenceLoopHandling = ReferenceLoopHandling.Ignore })
-            });
+            }); 
         }
     }
 }

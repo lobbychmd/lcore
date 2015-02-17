@@ -18,7 +18,6 @@ namespace l.core
         public override string ToString() {
             return Newtonsoft.Json.JsonConvert.SerializeObject(ParamsValue);
         }
-
         private IEnumerable<IParam> _params;
         public bool CheckParam { get; set; }
 

@@ -13,7 +13,7 @@ namespace l.core
     //通用模型加上ORM 设定
     public class Biz: MetaBiz {
         public string HashCode { get; set; }
-        new public ParamsHelper SmartParams { get { return base.SmartParams; } }
+       // new public ParamsHelper SmartParams { get { return base.SmartParams; } }
 
         
         public Biz(string bizID) {
@@ -48,7 +48,7 @@ namespace l.core
             if (!loaded) throw new Exception(string.Format("Biz \"{0}\" does not exist.", BizID));
             else if (Scripts.Where(p=>p.ProcEnabled).Count() == 0) throw new Exception(string.Format("Biz \"{0}\" does not include any valid statements.", BizID));
             //checkHashCode();
-            SmartParams.SetParams(Params);
+            base.Init();
             return this;
         }
 
@@ -102,7 +102,7 @@ namespace l.core
         public List<BizScript> Scripts { get; set; }
         public List<BizParam> Params { get; set; }
         public List<BizCheck> Checks { get; set; }
-        protected ParamsHelper SmartParams;
+        public ParamsHelper SmartParams { get; set; }
 
         private FieldMetaHelper fmHelper = null;
 
@@ -112,7 +112,11 @@ namespace l.core
             Scripts = new List<BizScript>();
             SmartParams = new ParamsHelper()  ;
         }
-        
+        public void Init(){
+            if (SmartParams == null) SmartParams = new ParamsHelper();
+            SmartParams.SetParams(Params);
+        }
+
         private void handleException(BizResult r, Exception e, string context, bool reThrow ) {
             if (e is BizException) ; //内层的异常，已经处理过了
             else
