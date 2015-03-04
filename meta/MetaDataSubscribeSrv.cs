@@ -24,7 +24,7 @@ namespace l.core{
         private OrmHelper getOrm() {
             return OrmHelper.From("metaDataSubscribeSrv")
                 .F("Name", "SrvCode", "HashCode", "Version","Interval",  "IntervalUnit").PK("SrvCode").Obj(this).End
-                .SubFrom("metaDataSubscribeSrvItems").Obj(Items).End;
+                .SubFrom("metaDataSubscribeSrvItems").MF("SubscribeSrvItemParams", null).Obj(Items).End;
         }
 
         public DataSubscribeSrv Load()  {
