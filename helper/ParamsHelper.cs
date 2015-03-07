@@ -122,7 +122,8 @@ namespace l.core
 
         public string ParamNamePrefixHandle(IEnumerable<IParam> _params, string script) {
             foreach (IParam p in _params as IEnumerable<IParam>) {
-                script = new System.Text.RegularExpressions.Regex("@"+ string.Join("", (from c in p.ParamName as string select string.Format("[{0}{1}]", c.ToString().ToUpper(), c.ToString().ToLower())))).Replace(script, "@par_" + p.ParamName);
+                if (!string.IsNullOrEmpty(p.ParamName.Trim()))
+                    script = new System.Text.RegularExpressions.Regex("@"+ string.Join("", (from c in p.ParamName as string select string.Format("[{0}{1}]", c.ToString().ToUpper(), c.ToString().ToLower())))).Replace(script, "@par_" + p.ParamName);
             }
             return script;
         }
