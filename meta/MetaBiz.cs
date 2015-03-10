@@ -155,8 +155,7 @@ namespace l.core
             });
         }
 
-        public BizResult Execute(IDbConnection conn)
-        {
+        public BizResult Execute(IDbConnection conn) {
             var t1 = DateTime.Now;
             validateSelf();
             var connection = conn == null ? Project.Current == null ? DBHelper.GetConnection(1) : Project.Current.GetConn((ConnAlias??"").Trim() == "" ? null : ConnAlias) : null;
@@ -179,8 +178,10 @@ namespace l.core
                                 int RowsAffected = 0;
                                 var paramValues = p;// SmartParams.GetDBParams(Params);
 
-                                var tsql = l.core.SmartScript.Eval(script.ProcSQL, Params.ToDictionary(p1 => p1.ParamName, q1 => paramValues.ContainsKey(q1.ParamName)?Convert.ToString(paramValues[q1.ParamName].ParamValue):null));
-
+                                string tsql;
+                                if (script.ScriptType == "2")
+                                    tsql = l.core.SmartScript.Eval(script.ProcSQL, Params.ToDictionary(p1 => p1.ParamName, q1 => paramValues.ContainsKey(q1.ParamName)?Convert.ToString(paramValues[q1.ParamName].ParamValue):null));
+                                else tsql = script.ProcSQL;
                                 if (script.InterActive){
                                     try {
                                         var dt = DBHelper.ExecuteQuery(conn ?? connection, SmartParams.ParamNamePrefixHandle(Params, tsql), paramValues);
@@ -308,6 +309,8 @@ namespace l.core
 
     public class BizScript {
         public int ProcIdx { get; set; }
+        public string ScriptType { get; set; }
+
         public string ProcSQL { get; set; }
         public bool InterActive { get; set; }
         public bool ProcRepeated { get; set; }

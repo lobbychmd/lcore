@@ -26,6 +26,9 @@ namespace l.core
             CheckParam = false;
         }
 
+        public void ClearParamsValue() {
+            ParamsValue.Clear();
+        }
         public void SetParams(IEnumerable<IParam> _params) {
             CheckParam = true;
             this._params = _params;
